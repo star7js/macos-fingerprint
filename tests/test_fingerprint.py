@@ -1,6 +1,5 @@
 """Tests for fingerprint module."""
 
-import json
 from datetime import datetime
 
 import pytest
@@ -86,10 +85,11 @@ class TestCreateFingerprint:
         """Test that collector results are included."""
         fingerprint = create_fingerprint()
 
-        # Each collector should return a dict
+        # Each collector should return valid data (dict, list, or error)
         for collector_name, result in fingerprint["collectors"].items():
-            assert isinstance(result, dict)
-            # Can be: error dict, data dict, or empty dict (no data collected)
+            # Result can be a dict (object data or error) or list (array data)
+            assert isinstance(result, (dict, list))
+            # Valid types: dict with data, dict with error, list with data, empty list/dict
 
 
 class TestHashFingerprint:
