@@ -68,11 +68,11 @@ class TestSaveFingerprint:
         assert result is True
         assert os.path.exists(temp_file)
 
-        # Verify it's encrypted (contains ciphertext)
+        # Verify it's encrypted (contains encrypted_data)
         with open(temp_file, "r") as f:
             data = json.load(f)
 
-        assert "ciphertext" in data
+        assert "encrypted_data" in data
         assert "salt" in data
         assert "nonce" in data
 

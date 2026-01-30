@@ -134,11 +134,13 @@ class TestCmdHash:
         mock_hash.return_value = "abc123def456"
 
         args = MagicMock()
-        args.fingerprint = temp_file
+        args.file = temp_file
+        args.encrypted = False
+        args.password = None
 
         cmd_hash(args)
 
-        mock_load.assert_called_once_with(temp_file)
+        mock_load.assert_called_once_with(temp_file, encrypted=False, password=None)
         mock_hash.assert_called_once_with(sample_fingerprint)
 
     @patch("macos_fingerprint.cli.load_fingerprint")
@@ -147,7 +149,9 @@ class TestCmdHash:
         mock_load.return_value = None  # Simulate load failure
 
         args = MagicMock()
-        args.fingerprint = temp_file
+        args.file = temp_file
+        args.encrypted = False
+        args.password = None
 
         with pytest.raises(SystemExit) as exc_info:
             cmd_hash(args)
