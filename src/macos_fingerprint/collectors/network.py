@@ -3,7 +3,6 @@ Network information collectors.
 """
 
 import os
-from typing import Dict, List
 from .base import BaseCollector, CollectorResult, CollectorCategory
 from ..utils.commands import run_command
 

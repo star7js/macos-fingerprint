@@ -3,7 +3,7 @@ Fingerprint comparison with diff-style output and severity classification.
 """
 
 import json
-from typing import Dict, Any, List, Set, Tuple
+from typing import Dict, Any, List
 from enum import Enum
 from datetime import datetime
 

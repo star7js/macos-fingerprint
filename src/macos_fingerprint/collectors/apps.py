@@ -3,7 +3,6 @@ Application collectors for installed apps, extensions, and launch agents.
 """
 
 import os
-from typing import Dict, List
 from .base import BaseCollector, CollectorResult, CollectorCategory
 from ..utils.commands import run_command
 

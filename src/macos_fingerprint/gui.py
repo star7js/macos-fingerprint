@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QTimer, Qt, QSettings, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QPalette, QColor
 
-from .core.fingerprint import create_fingerprint, hash_fingerprint
+from .core.fingerprint import create_fingerprint
 from .core.storage import save_fingerprint, load_fingerprint
 from .core.comparison import compare_fingerprints
 
@@ -365,7 +365,7 @@ class FingerPrintApp(QMainWindow):
             self.compare_result.setText("No differences found.")
             self.update_status("Comparison complete - no differences", 5000)
         else:
-            result_text = f"Comparison Summary:\n"
+            result_text = "Comparison Summary:\n"
             result_text += f"Total Changes: {summary['total_changes']}\n"
             result_text += f"Critical: {summary['critical']}\n"
             result_text += f"High: {summary['high']}\n"

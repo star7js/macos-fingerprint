@@ -3,7 +3,6 @@ Secure storage for fingerprint data.
 """
 
 import json
-import os
 from typing import Dict, Any, Optional
 
 from ..utils.commands import safe_write_file, safe_read_file, validate_json_safe

@@ -4,9 +4,7 @@ Safe command execution utilities with input validation.
 
 import subprocess
 import os
-import re
 from typing import List, Optional
-from pathlib import Path
 
 
 def sanitize_path(path: str) -> str:

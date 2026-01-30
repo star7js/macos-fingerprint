@@ -2,7 +2,6 @@
 System information collectors for hardware, OS, and kernel extensions.
 """
 
-import os
 from .base import BaseCollector, CollectorResult, CollectorCategory
 from ..utils.commands import run_command
 

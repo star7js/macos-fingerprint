@@ -4,7 +4,6 @@ Command-line interface for macOS Fingerprint.
 
 import argparse
 import sys
-from typing import Optional
 
 from .core.fingerprint import create_fingerprint, hash_fingerprint
 from .core.storage import save_fingerprint, load_fingerprint
@@ -51,7 +50,7 @@ def cmd_compare(args):
 
     # Display summary
     summary = differences['summary']
-    print(f"\nComparison Summary:")
+    print("\nComparison Summary:")
     print(f"  Total Changes: {summary['total_changes']}")
     print(f"  Critical: {summary['critical']}")
     print(f"  High: {summary['high']}")

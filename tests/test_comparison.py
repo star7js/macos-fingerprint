@@ -2,7 +2,6 @@
 Tests for fingerprint comparison.
 """
 
-import pytest
 from macos_fingerprint.core.comparison import (
     compare_lists,
     compare_dicts,

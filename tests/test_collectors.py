@@ -2,12 +2,9 @@
 Tests for collector modules.
 """
 
-import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from macos_fingerprint.collectors.base import (
-    BaseCollector,
     CollectorResult,
-    CollectorCategory,
     CollectorRegistry
 )
 from macos_fingerprint.collectors.apps import InstalledAppsCollector

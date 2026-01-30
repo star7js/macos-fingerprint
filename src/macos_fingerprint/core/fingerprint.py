@@ -5,9 +5,9 @@ Core fingerprinting functionality.
 import hashlib
 import json
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
-from ..collectors.base import CollectorRegistry, CollectorResult
+from ..collectors.base import CollectorRegistry
 from ..collectors import apps, system, network, security, user, developer
 from ..utils.crypto import hash_fingerprint_data
 
