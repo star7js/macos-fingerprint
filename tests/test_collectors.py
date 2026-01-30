@@ -74,7 +74,7 @@ class TestCollectorRegistry:
         assert CollectorRegistry.get_collector("InstalledAppsCollector") is None
 
 
-@patch('macos_fingerprint.utils.commands.run_command')
+@patch('macos_fingerprint.collectors.apps.run_command')
 class TestInstalledAppsCollector:
     """Test installed apps collector."""
 
@@ -106,7 +106,7 @@ class TestInstalledAppsCollector:
         assert result.data["user"] == []
 
 
-@patch('macos_fingerprint.utils.commands.run_command')
+@patch('macos_fingerprint.collectors.system.run_command')
 class TestSystemInfoCollector:
     """Test system info collector."""
 
