@@ -142,10 +142,6 @@ jobs:
       run: |
         macos-fingerprint --help
 
-    - name: Test GUI help
-      run: |
-        timeout 10 macos-fingerprint-gui --help || true
-
   dependency-review:
     runs-on: macos-latest
     if: github.event_name == 'pull_request'
