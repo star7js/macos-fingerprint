@@ -57,3 +57,6 @@ report*.html
 
 # Distribution
 *.whl
+
+# Local files
+*.local.md
