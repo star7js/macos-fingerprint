@@ -55,7 +55,13 @@ pip install -e ".[gui]"
 
 ```bash
 pip install -e ".[dev]"
+
+# Install pre-commit hooks (recommended)
+pip install pre-commit
+pre-commit install
 ```
+
+Pre-commit hooks will automatically run black, ruff, and mypy before each commit to ensure code quality.
 
 ## Usage
 
