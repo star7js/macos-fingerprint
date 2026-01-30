@@ -10,14 +10,16 @@ from datetime import datetime
 
 class ChangeSeverity(Enum):
     """Severity levels for detected changes."""
+
     CRITICAL = "critical"  # Security-related changes
-    HIGH = "high"          # System-level changes
-    MEDIUM = "medium"      # Application or configuration changes
-    LOW = "low"            # Minor changes
+    HIGH = "high"  # System-level changes
+    MEDIUM = "medium"  # Application or configuration changes
+    LOW = "low"  # Minor changes
 
 
 class ChangeType(Enum):
     """Types of changes detected."""
+
     ADDED = "added"
     REMOVED = "removed"
     MODIFIED = "modified"
@@ -36,17 +38,17 @@ def classify_severity(collector_name: str, change_type: ChangeType) -> ChangeSev
     """
     # Critical changes
     critical_collectors = [
-        'SecuritySettingsCollector',
-        'GatekeeperCollector',
-        'SSHConfigCollector'
+        "SecuritySettingsCollector",
+        "GatekeeperCollector",
+        "SSHConfigCollector",
     ]
 
     # High severity changes
     high_collectors = [
-        'KernelExtensionsCollector',
-        'LaunchAgentsCollector',
-        'UserAccountsCollector',
-        'NetworkConfigCollector'
+        "KernelExtensionsCollector",
+        "LaunchAgentsCollector",
+        "UserAccountsCollector",
+        "NetworkConfigCollector",
     ]
 
     if collector_name in critical_collectors:
@@ -76,10 +78,7 @@ def compare_lists(baseline: List, current: List) -> Dict[str, List]:
     added = list(current_set - baseline_set)
     removed = list(baseline_set - current_set)
 
-    return {
-        'added': sorted(added),
-        'removed': sorted(removed)
-    }
+    return {"added": sorted(added), "removed": sorted(removed)}
 
 
 def compare_dicts(baseline: Dict, current: Dict) -> Dict[str, Any]:
@@ -99,37 +98,36 @@ def compare_dicts(baseline: Dict, current: Dict) -> Dict[str, Any]:
 
     for key in all_keys:
         if key not in baseline:
-            changes[key] = {'type': 'added', 'value': current[key]}
+            changes[key] = {"type": "added", "value": current[key]}
         elif key not in current:
-            changes[key] = {'type': 'removed', 'value': baseline[key]}
+            changes[key] = {"type": "removed", "value": baseline[key]}
         elif baseline[key] != current[key]:
             # Handle different types
             if isinstance(baseline[key], list) and isinstance(current[key], list):
                 list_diff = compare_lists(baseline[key], current[key])
-                if list_diff['added'] or list_diff['removed']:
+                if list_diff["added"] or list_diff["removed"]:
                     changes[key] = {
-                        'type': 'modified',
-                        'added': list_diff['added'],
-                        'removed': list_diff['removed']
+                        "type": "modified",
+                        "added": list_diff["added"],
+                        "removed": list_diff["removed"],
                     }
             elif isinstance(baseline[key], dict) and isinstance(current[key], dict):
                 dict_diff = compare_dicts(baseline[key], current[key])
                 if dict_diff:
-                    changes[key] = {
-                        'type': 'modified',
-                        'changes': dict_diff
-                    }
+                    changes[key] = {"type": "modified", "changes": dict_diff}
             else:
                 changes[key] = {
-                    'type': 'modified',
-                    'baseline': baseline[key],
-                    'current': current[key]
+                    "type": "modified",
+                    "baseline": baseline[key],
+                    "current": current[key],
                 }
 
     return changes
 
 
-def compare_fingerprints(baseline: Dict[str, Any], current: Dict[str, Any]) -> Dict[str, Any]:
+def compare_fingerprints(
+    baseline: Dict[str, Any], current: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Compare two fingerprints and return detailed differences.
 
@@ -141,43 +139,43 @@ def compare_fingerprints(baseline: Dict[str, Any], current: Dict[str, Any]) -> D
         Dictionary containing comparison results with severity classification
     """
     differences = {
-        'timestamp': datetime.now().isoformat(),
-        'baseline_timestamp': baseline.get('timestamp', 'unknown'),
-        'current_timestamp': current.get('timestamp', 'unknown'),
-        'summary': {
-            'total_changes': 0,
-            'critical': 0,
-            'high': 0,
-            'medium': 0,
-            'low': 0
+        "timestamp": datetime.now().isoformat(),
+        "baseline_timestamp": baseline.get("timestamp", "unknown"),
+        "current_timestamp": current.get("timestamp", "unknown"),
+        "summary": {
+            "total_changes": 0,
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
         },
-        'changes': {}
+        "changes": {},
     }
 
-    baseline_collectors = baseline.get('collectors', {})
-    current_collectors = current.get('collectors', {})
+    baseline_collectors = baseline.get("collectors", {})
+    current_collectors = current.get("collectors", {})
 
     all_collectors = set(baseline_collectors.keys()) | set(current_collectors.keys())
 
     for collector in all_collectors:
         if collector not in baseline_collectors:
             severity = ChangeSeverity.LOW
-            differences['changes'][collector] = {
-                'severity': severity.value,
-                'type': 'collector_added',
-                'data': current_collectors[collector]
+            differences["changes"][collector] = {
+                "severity": severity.value,
+                "type": "collector_added",
+                "data": current_collectors[collector],
             }
-            differences['summary'][severity.value] += 1
-            differences['summary']['total_changes'] += 1
+            differences["summary"][severity.value] += 1
+            differences["summary"]["total_changes"] += 1
         elif collector not in current_collectors:
             severity = ChangeSeverity.MEDIUM
-            differences['changes'][collector] = {
-                'severity': severity.value,
-                'type': 'collector_removed',
-                'data': baseline_collectors[collector]
+            differences["changes"][collector] = {
+                "severity": severity.value,
+                "type": "collector_removed",
+                "data": baseline_collectors[collector],
             }
-            differences['summary'][severity.value] += 1
-            differences['summary']['total_changes'] += 1
+            differences["summary"][severity.value] += 1
+            differences["summary"]["total_changes"] += 1
         else:
             baseline_data = baseline_collectors[collector]
             current_data = current_collectors[collector]
@@ -186,42 +184,42 @@ def compare_fingerprints(baseline: Dict[str, Any], current: Dict[str, Any]) -> D
                 # Compare the data
                 if isinstance(baseline_data, list) and isinstance(current_data, list):
                     diff = compare_lists(baseline_data, current_data)
-                    if diff['added'] or diff['removed']:
+                    if diff["added"] or diff["removed"]:
                         # Determine severity
                         change_type = ChangeType.MODIFIED
                         severity = classify_severity(collector, change_type)
 
-                        differences['changes'][collector] = {
-                            'severity': severity.value,
-                            'type': 'modified',
-                            'added': diff['added'],
-                            'removed': diff['removed']
+                        differences["changes"][collector] = {
+                            "severity": severity.value,
+                            "type": "modified",
+                            "added": diff["added"],
+                            "removed": diff["removed"],
                         }
-                        differences['summary'][severity.value] += 1
-                        differences['summary']['total_changes'] += 1
+                        differences["summary"][severity.value] += 1
+                        differences["summary"]["total_changes"] += 1
                 elif isinstance(baseline_data, dict) and isinstance(current_data, dict):
                     diff = compare_dicts(baseline_data, current_data)
                     if diff:
                         severity = classify_severity(collector, ChangeType.MODIFIED)
 
-                        differences['changes'][collector] = {
-                            'severity': severity.value,
-                            'type': 'modified',
-                            'changes': diff
+                        differences["changes"][collector] = {
+                            "severity": severity.value,
+                            "type": "modified",
+                            "changes": diff,
                         }
-                        differences['summary'][severity.value] += 1
-                        differences['summary']['total_changes'] += 1
+                        differences["summary"][severity.value] += 1
+                        differences["summary"]["total_changes"] += 1
                 else:
                     severity = classify_severity(collector, ChangeType.MODIFIED)
 
-                    differences['changes'][collector] = {
-                        'severity': severity.value,
-                        'type': 'modified',
-                        'baseline': baseline_data,
-                        'current': current_data
+                    differences["changes"][collector] = {
+                        "severity": severity.value,
+                        "type": "modified",
+                        "baseline": baseline_data,
+                        "current": current_data,
                     }
-                    differences['summary'][severity.value] += 1
-                    differences['summary']['total_changes'] += 1
+                    differences["summary"][severity.value] += 1
+                    differences["summary"]["total_changes"] += 1
 
     return differences
 
@@ -302,26 +300,26 @@ def export_comparison_html(differences: Dict[str, Any], filename: str) -> bool:
     <h2>Changes</h2>
 """
 
-        for collector, change in differences['changes'].items():
-            severity = change['severity']
+        for collector, change in differences["changes"].items():
+            severity = change["severity"]
             html += f"""
     <div class="change {severity}">
         <h3>{collector} <span style="color: #888; font-size: 0.8em;">({severity})</span></h3>
 """
 
-            if 'added' in change:
+            if "added" in change:
                 html += f"""
         <p><strong class="added">Added ({len(change['added'])}):</strong></p>
         <pre>{json.dumps(change['added'], indent=2)}</pre>
 """
 
-            if 'removed' in change:
+            if "removed" in change:
                 html += f"""
         <p><strong class="removed">Removed ({len(change['removed'])}):</strong></p>
         <pre>{json.dumps(change['removed'], indent=2)}</pre>
 """
 
-            if 'changes' in change:
+            if "changes" in change:
                 html += f"""
         <p><strong>Changes:</strong></p>
         <pre>{json.dumps(change['changes'], indent=2)}</pre>
@@ -336,7 +334,7 @@ def export_comparison_html(differences: Dict[str, Any], filename: str) -> bool:
 </html>
 """
 
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, "w", encoding="utf-8") as f:
             f.write(html)
 
         return True
@@ -357,7 +355,7 @@ def export_comparison_json(differences: Dict[str, Any], filename: str) -> bool:
         True if successful, False otherwise
     """
     try:
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(differences, f, indent=2)
         return True
     except Exception as e:

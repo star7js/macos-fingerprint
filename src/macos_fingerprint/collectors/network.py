@@ -19,10 +19,11 @@ class NetworkConfigCollector(BaseCollector):
 
         # Get active network services
         network_services = run_command(["networksetup", "-listnetworkserviceorder"])
-        network_services_list = network_services.split('\n') if network_services else []
+        network_services_list = network_services.split("\n") if network_services else []
         active_services = [
-            line.split('):')[1].strip()
-            for line in network_services_list if '* ' in line
+            line.split("):")[1].strip()
+            for line in network_services_list
+            if "* " in line
         ]
 
         ip_addresses = {}
@@ -32,8 +33,8 @@ class NetworkConfigCollector(BaseCollector):
                 ip_addresses[service] = ip
 
         dns_result = run_command(["scutil", "--dns"])
-        dns_servers_list = dns_result.split('\n') if dns_result else []
-        dns_servers = [line for line in dns_servers_list if 'nameserver[' in line]
+        dns_servers_list = dns_result.split("\n") if dns_result else []
+        dns_servers = [line for line in dns_servers_list if "nameserver[" in line]
 
         routing_table = run_command(["netstat", "-nr"])
         arp_cache = run_command(["arp", "-a"])
@@ -51,32 +52,27 @@ class NetworkConfigCollector(BaseCollector):
             secure_proxy = run_command(["networksetup", "-getsecurewebproxy", service])
             proxy_settings[service] = {
                 "web_proxy": web_proxy if web_proxy else "",
-                "secure_proxy": secure_proxy if secure_proxy else ""
+                "secure_proxy": secure_proxy if secure_proxy else "",
             }
 
-        firewall_status = run_command([
-            "defaults", "read",
-            "/Library/Preferences/com.apple.alf", "globalstate"
-        ])
+        firewall_status = run_command(
+            ["defaults", "read", "/Library/Preferences/com.apple.alf", "globalstate"]
+        )
 
         data = {
-            "interfaces": interfaces.split('\n') if interfaces else [],
+            "interfaces": interfaces.split("\n") if interfaces else [],
             "active_services": active_services,
             "ip_addresses": ip_addresses,
             "dns_servers": dns_servers,
-            "routing_table": routing_table.split('\n') if routing_table else [],
-            "arp_cache": arp_cache.split('\n') if arp_cache else [],
-            "wifi_networks": wifi_networks.split('\n') if wifi_networks else [],
-            "vpn": vpn.split('\n') if vpn else [],
+            "routing_table": routing_table.split("\n") if routing_table else [],
+            "arp_cache": arp_cache.split("\n") if arp_cache else [],
+            "wifi_networks": wifi_networks.split("\n") if wifi_networks else [],
+            "vpn": vpn.split("\n") if vpn else [],
             "proxy_settings": proxy_settings,
-            "firewall_status": firewall_status if firewall_status else ""
+            "firewall_status": firewall_status if firewall_status else "",
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class OpenPortsCollector(BaseCollector):
@@ -89,13 +85,9 @@ class OpenPortsCollector(BaseCollector):
     def collect(self) -> CollectorResult:
         # Use non-privileged lsof (shows user processes only)
         result = run_command(["lsof", "-i", "-P", "-n"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class NetworkConnectionsCollector(BaseCollector):
@@ -107,13 +99,9 @@ class NetworkConnectionsCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["netstat", "-an"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class SSHConfigCollector(BaseCollector):
@@ -128,15 +116,11 @@ class SSHConfigCollector(BaseCollector):
         known_hosts = run_command(["cat", os.path.expanduser("~/.ssh/known_hosts")])
 
         data = {
-            "sshd_config": ssh_config.split('\n') if ssh_config else [],
-            "known_hosts": known_hosts.split('\n') if known_hosts else []
+            "sshd_config": ssh_config.split("\n") if ssh_config else [],
+            "known_hosts": known_hosts.split("\n") if known_hosts else [],
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class HostsFileCollector(BaseCollector):
@@ -148,13 +132,9 @@ class HostsFileCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["cat", "/etc/hosts"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class NetworkSharesCollector(BaseCollector):
@@ -166,13 +146,9 @@ class NetworkSharesCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["sharing", "-l"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class BonjourServicesCollector(BaseCollector):
@@ -184,10 +160,6 @@ class BonjourServicesCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["dns-sd", "-B"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)

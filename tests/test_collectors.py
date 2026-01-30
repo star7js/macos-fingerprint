@@ -3,10 +3,7 @@ Tests for collector modules.
 """
 
 from unittest.mock import patch
-from macos_fingerprint.collectors.base import (
-    CollectorResult,
-    CollectorRegistry
-)
+from macos_fingerprint.collectors.base import CollectorResult, CollectorRegistry
 from macos_fingerprint.collectors.apps import InstalledAppsCollector
 from macos_fingerprint.collectors.system import SystemInfoCollector
 
@@ -17,9 +14,7 @@ class TestBaseCollector:
     def test_collector_result_success(self):
         """Test successful collector result."""
         result = CollectorResult(
-            success=True,
-            data={"test": "data"},
-            collector_name="TestCollector"
+            success=True, data={"test": "data"}, collector_name="TestCollector"
         )
         assert result.success
         assert result.data == {"test": "data"}
@@ -28,10 +23,7 @@ class TestBaseCollector:
     def test_collector_result_error(self):
         """Test error collector result."""
         result = CollectorResult(
-            success=False,
-            data=None,
-            error="Test error",
-            collector_name="TestCollector"
+            success=False, data=None, error="Test error", collector_name="TestCollector"
         )
         assert not result.success
         assert result.data is None
@@ -74,7 +66,7 @@ class TestCollectorRegistry:
         assert CollectorRegistry.get_collector("InstalledAppsCollector") is None
 
 
-@patch('macos_fingerprint.collectors.apps.run_command')
+@patch("macos_fingerprint.collectors.apps.run_command")
 class TestInstalledAppsCollector:
     """Test installed apps collector."""
 
@@ -82,7 +74,7 @@ class TestInstalledAppsCollector:
         """Test successful collection."""
         mock_run_command.side_effect = [
             "App1.app\nApp2.app",  # System apps
-            "UserApp.app"          # User apps
+            "UserApp.app",  # User apps
         ]
 
         collector = InstalledAppsCollector()
@@ -106,7 +98,7 @@ class TestInstalledAppsCollector:
         assert result.data["user"] == []
 
 
-@patch('macos_fingerprint.collectors.system.run_command')
+@patch("macos_fingerprint.collectors.system.run_command")
 class TestSystemInfoCollector:
     """Test system info collector."""
 
@@ -114,11 +106,11 @@ class TestSystemInfoCollector:
         """Test successful collection."""
         mock_run_command.side_effect = [
             "ProductName: macOS\nProductVersion: 14.0",  # sw_vers
-            "MacBook-Pro.local",                           # hostname
-            "up 5 days",                                   # uptime
-            "MacBookPro18,3",                              # hardware_model
-            "Apple M1 Pro",                                # cpu_brand
-            "17179869184"                                  # memory_size
+            "MacBook-Pro.local",  # hostname
+            "up 5 days",  # uptime
+            "MacBookPro18,3",  # hardware_model
+            "Apple M1 Pro",  # cpu_brand
+            "17179869184",  # memory_size
         ]
 
         collector = SystemInfoCollector()

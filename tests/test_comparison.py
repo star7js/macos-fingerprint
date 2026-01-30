@@ -8,7 +8,7 @@ from macos_fingerprint.core.comparison import (
     compare_fingerprints,
     ChangeSeverity,
     classify_severity,
-    ChangeType
+    ChangeType,
 )
 
 
@@ -112,9 +112,7 @@ class TestCompareFingerprints:
         """Test comparing identical fingerprints."""
         fingerprint = {
             "timestamp": "2026-01-01T00:00:00",
-            "collectors": {
-                "InstalledAppsCollector": {"system": ["App1", "App2"]}
-            }
+            "collectors": {"InstalledAppsCollector": {"system": ["App1", "App2"]}},
         }
 
         result = compare_fingerprints(fingerprint, fingerprint)
@@ -125,16 +123,14 @@ class TestCompareFingerprints:
         """Test comparing fingerprints with changes."""
         baseline = {
             "timestamp": "2026-01-01T00:00:00",
-            "collectors": {
-                "InstalledAppsCollector": {"system": ["App1", "App2"]}
-            }
+            "collectors": {"InstalledAppsCollector": {"system": ["App1", "App2"]}},
         }
 
         current = {
             "timestamp": "2026-01-02T00:00:00",
             "collectors": {
                 "InstalledAppsCollector": {"system": ["App1", "App2", "App3"]}
-            }
+            },
         }
 
         result = compare_fingerprints(baseline, current)

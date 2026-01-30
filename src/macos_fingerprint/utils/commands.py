@@ -30,7 +30,7 @@ def sanitize_path(path: str) -> str:
     resolved = os.path.abspath(expanded)
 
     # Check for suspicious patterns
-    if '..' in path or path.startswith('/dev/') or path.startswith('/proc/'):
+    if ".." in path or path.startswith("/dev/") or path.startswith("/proc/"):
         raise ValueError(f"Invalid path: {path}")
 
     return resolved
@@ -56,11 +56,11 @@ def validate_command(command: List[str]) -> bool:
         raise ValueError("All command arguments must be strings")
 
     # Check for shell metacharacters in command arguments
-    dangerous_chars = ['|', '&', ';', '>', '<', '`', '$', '(', ')']
+    dangerous_chars = ["|", "&", ";", ">", "<", "`", "$", "(", ")"]
     for arg in command:
         if any(char in arg for char in dangerous_chars):
             # Allow these in specific safe contexts (like osascript)
-            if command[0] not in ['osascript']:
+            if command[0] not in ["osascript"]:
                 raise ValueError(f"Command contains dangerous characters: {arg}")
 
     return True
@@ -88,7 +88,7 @@ def run_command(command: List[str], timeout: int = 30) -> Optional[str]:
             text=True,
             check=True,
             timeout=timeout,
-            shell=False  # NEVER use shell=True
+            shell=False,  # NEVER use shell=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
@@ -126,7 +126,7 @@ def safe_read_file(filepath: str, max_size: int = 10 * 1024 * 1024) -> Optional[
             print(f"File too large: {filepath}")
             return None
 
-        with open(sanitized_path, 'r', encoding='utf-8') as f:
+        with open(sanitized_path, "r", encoding="utf-8") as f:
             return f.read()
     except (OSError, IOError, ValueError):
         return None
@@ -152,7 +152,7 @@ def safe_write_file(filepath: str, content: str, permissions: int = 0o600) -> bo
         os.makedirs(parent_dir, exist_ok=True)
 
         # Write file
-        with open(sanitized_path, 'w', encoding='utf-8') as f:
+        with open(sanitized_path, "w", encoding="utf-8") as f:
             f.write(content)
 
         # Set secure permissions
@@ -184,7 +184,7 @@ def validate_json_safe(json_string: str, max_size: int = 100 * 1024 * 1024) -> b
         raise ValueError(f"JSON string too large: {len(json_string)} bytes")
 
     # Check for excessive nesting (simple heuristic)
-    if json_string.count('{') > 1000 or json_string.count('[') > 1000:
+    if json_string.count("{") > 1000 or json_string.count("[") > 1000:
         raise ValueError("JSON has excessive nesting")
 
     return True

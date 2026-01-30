@@ -10,6 +10,7 @@ from enum import Enum
 
 class CollectorCategory(Enum):
     """Categories for organizing collectors."""
+
     APPS = "applications"
     SYSTEM = "system"
     NETWORK = "network"
@@ -22,6 +23,7 @@ class CollectorCategory(Enum):
 @dataclass
 class CollectorResult:
     """Result from a collector execution."""
+
     success: bool
     data: Any
     error: Optional[str] = None
@@ -61,10 +63,7 @@ class BaseCollector(ABC):
             return self.collect()
         except Exception as e:
             return CollectorResult(
-                success=False,
-                data=None,
-                error=str(e),
-                collector_name=self.name
+                success=False, data=None, error=str(e), collector_name=self.name
             )
 
 
@@ -120,7 +119,9 @@ class CollectorRegistry:
         return list(cls._collectors.values())
 
     @classmethod
-    def get_collectors_by_category(cls, category: CollectorCategory) -> List[BaseCollector]:
+    def get_collectors_by_category(
+        cls, category: CollectorCategory
+    ) -> List[BaseCollector]:
         """
         Get collectors by category.
 
@@ -131,7 +132,8 @@ class CollectorRegistry:
             List of collectors in the category
         """
         return [
-            collector for collector in cls._collectors.values()
+            collector
+            for collector in cls._collectors.values()
             if collector.category == category
         ]
 

@@ -13,7 +13,7 @@ def save_fingerprint(
     fingerprint: Dict[str, Any],
     filename: str,
     encrypt: bool = False,
-    password: Optional[str] = None
+    password: Optional[str] = None,
 ) -> bool:
     """
     Save fingerprint to file with optional encryption.
@@ -36,7 +36,7 @@ def save_fingerprint(
         else:
             # Add integrity hash
             data_with_hash = fingerprint.copy()
-            data_with_hash['_integrity_hash'] = compute_integrity_hash(fingerprint)
+            data_with_hash["_integrity_hash"] = compute_integrity_hash(fingerprint)
             content = json.dumps(data_with_hash, indent=2)
 
         # Write with secure permissions (0600)
@@ -47,9 +47,7 @@ def save_fingerprint(
 
 
 def load_fingerprint(
-    filename: str,
-    encrypted: bool = False,
-    password: Optional[str] = None
+    filename: str, encrypted: bool = False, password: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Load fingerprint from file with optional decryption.
@@ -78,8 +76,8 @@ def load_fingerprint(
             fingerprint = encryptor.decrypt(data)
         else:
             # Verify integrity hash if present
-            if '_integrity_hash' in data:
-                stored_hash = data.pop('_integrity_hash')
+            if "_integrity_hash" in data:
+                stored_hash = data.pop("_integrity_hash")
                 computed_hash = compute_integrity_hash(data)
                 if stored_hash != computed_hash:
                     print("Warning: Integrity check failed - data may be corrupted")

@@ -24,19 +24,15 @@ class SystemInfoCollector(BaseCollector):
         memory_size = run_command(["sysctl", "-n", "hw.memsize"])
 
         data = {
-            "sw_vers": sw_vers.split('\n') if sw_vers else [],
+            "sw_vers": sw_vers.split("\n") if sw_vers else [],
             "hostname": hostname if hostname else "",
             "uptime": uptime if uptime else "",
             "hardware_model": hardware_model if hardware_model else "",
             "cpu_brand": cpu_brand if cpu_brand else "",
-            "memory_size": memory_size if memory_size else ""
+            "memory_size": memory_size if memory_size else "",
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class KernelExtensionsCollector(BaseCollector):
@@ -48,13 +44,9 @@ class KernelExtensionsCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["kextstat", "-l"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class PrintersCollector(BaseCollector):
@@ -66,13 +58,9 @@ class PrintersCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["lpstat", "-p"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class BluetoothDevicesCollector(BaseCollector):
@@ -84,13 +72,9 @@ class BluetoothDevicesCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["system_profiler", "SPBluetoothDataType"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class TimeMachineCollector(BaseCollector):
@@ -102,10 +86,6 @@ class TimeMachineCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["tmutil", "destinationinfo"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)

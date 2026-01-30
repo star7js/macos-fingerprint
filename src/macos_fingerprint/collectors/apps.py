@@ -19,15 +19,11 @@ class InstalledAppsCollector(BaseCollector):
         user_apps = run_command(["ls", "-1", os.path.expanduser("~/Applications")])
 
         data = {
-            "system": system_apps.split('\n') if system_apps else [],
-            "user": user_apps.split('\n') if user_apps else []
+            "system": system_apps.split("\n") if system_apps else [],
+            "user": user_apps.split("\n") if user_apps else [],
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class BrowserExtensionsCollector(BaseCollector):
@@ -41,26 +37,30 @@ class BrowserExtensionsCollector(BaseCollector):
         safari_extensions = run_command(
             ["ls", "-1", os.path.expanduser("~/Library/Safari/Extensions")]
         )
-        chrome_extensions = run_command([
-            "ls", "-1",
-            os.path.expanduser("~/Library/Application Support/Google/Chrome/Default/Extensions")
-        ])
-        firefox_extensions = run_command([
-            "ls", "-1",
-            os.path.expanduser("~/Library/Application Support/Firefox/Profiles")
-        ])
+        chrome_extensions = run_command(
+            [
+                "ls",
+                "-1",
+                os.path.expanduser(
+                    "~/Library/Application Support/Google/Chrome/Default/Extensions"
+                ),
+            ]
+        )
+        firefox_extensions = run_command(
+            [
+                "ls",
+                "-1",
+                os.path.expanduser("~/Library/Application Support/Firefox/Profiles"),
+            ]
+        )
 
         data = {
-            "safari": safari_extensions.split('\n') if safari_extensions else [],
-            "chrome": chrome_extensions.split('\n') if chrome_extensions else [],
-            "firefox": firefox_extensions.split('\n') if firefox_extensions else []
+            "safari": safari_extensions.split("\n") if safari_extensions else [],
+            "chrome": chrome_extensions.split("\n") if chrome_extensions else [],
+            "firefox": firefox_extensions.split("\n") if firefox_extensions else [],
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class LaunchAgentsCollector(BaseCollector):
@@ -71,23 +71,19 @@ class LaunchAgentsCollector(BaseCollector):
         self.category = CollectorCategory.APPS
 
     def collect(self) -> CollectorResult:
-        system_agents = run_command([
-            "ls", "-1", "/Library/LaunchAgents", "/Library/LaunchDaemons"
-        ])
-        user_agents = run_command([
-            "ls", "-1", os.path.expanduser("~/Library/LaunchAgents")
-        ])
+        system_agents = run_command(
+            ["ls", "-1", "/Library/LaunchAgents", "/Library/LaunchDaemons"]
+        )
+        user_agents = run_command(
+            ["ls", "-1", os.path.expanduser("~/Library/LaunchAgents")]
+        )
 
         data = {
-            "system": system_agents.split('\n') if system_agents else [],
-            "user": user_agents.split('\n') if user_agents else []
+            "system": system_agents.split("\n") if system_agents else [],
+            "user": user_agents.split("\n") if user_agents else [],
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class StartupItemsCollector(BaseCollector):
@@ -98,15 +94,14 @@ class StartupItemsCollector(BaseCollector):
         self.category = CollectorCategory.APPS
 
     def collect(self) -> CollectorResult:
-        result = run_command([
-            "osascript", "-e",
-            'tell application "System Events" to get the name of every login item'
-        ])
-
-        data = result.split(', ') if result else []
-
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
+        result = run_command(
+            [
+                "osascript",
+                "-e",
+                'tell application "System Events" to get the name of every login item',
+            ]
         )
+
+        data = result.split(", ") if result else []
+
+        return CollectorResult(success=True, data=data, collector_name=self.name)

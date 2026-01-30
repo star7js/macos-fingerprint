@@ -15,10 +15,6 @@ class UserAccountsCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["dscl", ".", "-list", "/Users"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)

@@ -7,7 +7,7 @@ from macos_fingerprint.utils.crypto import (
     hash_sensitive_value,
     hash_fingerprint_data,
     FingerprintEncryption,
-    compute_integrity_hash
+    compute_integrity_hash,
 )
 
 
@@ -43,10 +43,8 @@ class TestHashFingerprintData:
         """Test hashing network config data."""
         data = {
             "network_config": {
-                "ip_addresses": {
-                    "en0": "192.168.1.100"
-                },
-                "arp_cache": ["192.168.1.1 at aa:bb:cc:dd:ee:ff"]
+                "ip_addresses": {"en0": "192.168.1.100"},
+                "arp_cache": ["192.168.1.1 at aa:bb:cc:dd:ee:ff"],
             }
         }
 
@@ -57,19 +55,21 @@ class TestHashFingerprintData:
         assert len(hashed_data["network_config"]["ip_addresses"]["en0"]) == 64
 
         # Verify ARP cache is hashed
-        assert hashed_data["network_config"]["arp_cache"][0] != data["network_config"]["arp_cache"][0]
+        assert (
+            hashed_data["network_config"]["arp_cache"][0]
+            != data["network_config"]["arp_cache"][0]
+        )
 
     def test_hash_ssh_config(self):
         """Test hashing SSH config."""
-        data = {
-            "ssh_config": {
-                "known_hosts": ["192.168.1.1 ssh-rsa AAAAB3..."]
-            }
-        }
+        data = {"ssh_config": {"known_hosts": ["192.168.1.1 ssh-rsa AAAAB3..."]}}
 
         hashed_data = hash_fingerprint_data(data)
 
-        assert hashed_data["ssh_config"]["known_hosts"][0] != data["ssh_config"]["known_hosts"][0]
+        assert (
+            hashed_data["ssh_config"]["known_hosts"][0]
+            != data["ssh_config"]["known_hosts"][0]
+        )
 
 
 class TestFingerprintEncryption:

@@ -10,10 +10,10 @@ from . import user
 from . import developer
 
 __all__ = [
-    'apps',
-    'system',
-    'network',
-    'security',
-    'user',
-    'developer',
+    "apps",
+    "system",
+    "network",
+    "security",
+    "user",
+    "developer",
 ]

@@ -13,17 +13,17 @@ def sample_fingerprint():
         "collectors": {
             "InstalledAppsCollector": {
                 "system": ["App1.app", "App2.app"],
-                "user": ["UserApp.app"]
+                "user": ["UserApp.app"],
             },
             "SystemInfoCollector": {
                 "hostname": "test-mac.local",
-                "sw_vers": ["ProductName: macOS", "ProductVersion: 14.0"]
+                "sw_vers": ["ProductName: macOS", "ProductVersion: 14.0"],
             },
             "NetworkConfigCollector": {
                 "ip_addresses": {"en0": "192.168.1.100"},
-                "interfaces": ["en0", "en1"]
-            }
-        }
+                "interfaces": ["en0", "en1"],
+            },
+        },
     }
 
 
@@ -32,12 +32,7 @@ def sample_baseline():
     """Sample baseline fingerprint."""
     return {
         "timestamp": "2026-01-01T00:00:00",
-        "collectors": {
-            "InstalledAppsCollector": {
-                "system": ["App1.app"],
-                "user": []
-            }
-        }
+        "collectors": {"InstalledAppsCollector": {"system": ["App1.app"], "user": []}},
     }
 
 
@@ -49,7 +44,7 @@ def sample_current():
         "collectors": {
             "InstalledAppsCollector": {
                 "system": ["App1.app", "App2.app", "App3.app"],
-                "user": ["UserApp.app"]
+                "user": ["UserApp.app"],
             }
-        }
+        },
     }

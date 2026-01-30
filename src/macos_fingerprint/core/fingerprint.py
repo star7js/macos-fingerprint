@@ -70,19 +70,14 @@ def create_fingerprint(hash_sensitive: bool = True) -> Dict[str, Any]:
     results = CollectorRegistry.collect_all()
 
     # Build fingerprint structure
-    fingerprint = {
-        "timestamp": datetime.now().isoformat(),
-        "collectors": {}
-    }
+    fingerprint = {"timestamp": datetime.now().isoformat(), "collectors": {}}
 
     # Add successful collector results
     for name, result in results.items():
         if result.success:
             fingerprint["collectors"][name] = result.data
         else:
-            fingerprint["collectors"][name] = {
-                "error": result.error
-            }
+            fingerprint["collectors"][name] = {"error": result.error}
 
     # Hash sensitive fields if requested
     if hash_sensitive:
@@ -101,5 +96,5 @@ def hash_fingerprint(fingerprint: Dict[str, Any]) -> str:
     Returns:
         Hex-encoded hash string
     """
-    serialized = json.dumps(fingerprint, sort_keys=True).encode('utf-8')
+    serialized = json.dumps(fingerprint, sort_keys=True).encode("utf-8")
     return hashlib.sha256(serialized).hexdigest()

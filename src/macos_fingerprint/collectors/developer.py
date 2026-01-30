@@ -20,15 +20,11 @@ class HomebrewCollector(BaseCollector):
         casks = run_command(["brew", "list", "--cask"])
 
         data = {
-            "formulas": formulas.split('\n') if formulas else [],
-            "casks": casks.split('\n') if casks else []
+            "formulas": formulas.split("\n") if formulas else [],
+            "casks": casks.split("\n") if casks else [],
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class PipPackagesCollector(BaseCollector):
@@ -44,13 +40,9 @@ class PipPackagesCollector(BaseCollector):
         if not result:
             result = run_command(["pip", "list"])
 
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class NpmPackagesCollector(BaseCollector):
@@ -62,13 +54,9 @@ class NpmPackagesCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["npm", "list", "-g", "--depth=0"])
-        data = result.split('\n') if result else []
+        data = result.split("\n") if result else []
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
 class XcodeCollector(BaseCollector):
@@ -83,12 +71,8 @@ class XcodeCollector(BaseCollector):
         selected_path = run_command(["xcode-select", "-p"])
 
         data = {
-            "version": version.split('\n') if version else [],
-            "selected_path": selected_path if selected_path else ""
+            "version": version.split("\n") if version else [],
+            "selected_path": selected_path if selected_path else "",
         }
 
-        return CollectorResult(
-            success=True,
-            data=data,
-            collector_name=self.name
-        )
+        return CollectorResult(success=True, data=data, collector_name=self.name)
