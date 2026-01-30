@@ -144,7 +144,7 @@ jobs:
 
     - name: Test GUI help
       run: |
-        macos-fingerprint-gui --help || true
+        timeout 10 macos-fingerprint-gui --help || true
 
   dependency-review:
     runs-on: macos-latest
