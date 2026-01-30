@@ -1,5 +1,11 @@
 # macOS Fingerprint
 
+[![CI](https://github.com/star7js/macos-fingerprint/actions/workflows/ci.yml/badge.svg)](https://github.com/star7js/macos-fingerprint/actions/workflows/ci.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/gh/star7js/macos-fingerprint/branch/main/graph/badge.svg)](https://codecov.io/gh/star7js/macos-fingerprint)
+
 A comprehensive, security-focused macOS system fingerprinting tool for detecting unauthorized changes to your Mac. Track installed applications, system configuration, network settings, security status, and developer environment.
 
 ## Features

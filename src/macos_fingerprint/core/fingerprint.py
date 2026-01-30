@@ -75,9 +75,9 @@ def create_fingerprint(hash_sensitive: bool = True) -> Dict[str, Any]:
     # Add successful collector results
     for name, result in results.items():
         if result.success:
-            fingerprint["collectors"][name] = result.data
+            fingerprint["collectors"][name] = result.data  # type: ignore[index]
         else:
-            fingerprint["collectors"][name] = {"error": result.error}
+            fingerprint["collectors"][name] = {"error": result.error}  # type: ignore[index]
 
     # Hash sensitive fields if requested
     if hash_sensitive:
