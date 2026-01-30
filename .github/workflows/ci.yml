@@ -11,13 +11,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-12, macos-13, macos-14]
+        os: [macos-12, macos-14, macos-latest]
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         exclude:
-          # macOS 14 only supports Python 3.10+
+          # macOS 14+ only supports Python 3.10+
           - os: macos-14
             python-version: '3.8'
           - os: macos-14
+            python-version: '3.9'
+          - os: macos-latest
+            python-version: '3.8'
+          - os: macos-latest
             python-version: '3.9'
 
     steps:
@@ -41,7 +45,7 @@ jobs:
       uses: codecov/codecov-action@v5
       if: matrix.python-version == '3.12' && matrix.os == 'macos-14'
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         fail_ci_if_error: false
 
   lint:
