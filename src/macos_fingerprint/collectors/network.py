@@ -3,6 +3,7 @@ Network information collectors.
 """
 
 import os
+import re
 from .base import BaseCollector, CollectorResult, CollectorCategory
 from ..utils.commands import run_command
 
@@ -17,14 +18,16 @@ class NetworkConfigCollector(BaseCollector):
     def collect(self) -> CollectorResult:
         interfaces = run_command(["networksetup", "-listallhardwareports"])
 
-        # Get active network services
+        # Get active network services.
+        # Output format: "(1) Wi-Fi", "(2) Ethernet", disabled: "(*) Service"
         network_services = run_command(["networksetup", "-listnetworkserviceorder"])
         network_services_list = network_services.split("\n") if network_services else []
-        active_services = [
-            line.split("):")[1].strip()
-            for line in network_services_list
-            if "* " in line
-        ]
+        active_services = []
+        for line in network_services_list:
+            # Match numbered entries like "(1) Wi-Fi" but skip disabled "(*) ..."
+            m = re.match(r"^\((\d+)\)\s+(.+)$", line.strip())
+            if m:
+                active_services.append(m.group(2))
 
         ip_addresses = {}
         for service in active_services:
