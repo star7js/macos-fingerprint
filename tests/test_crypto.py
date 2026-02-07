@@ -40,36 +40,66 @@ class TestHashFingerprintData:
     """Test fingerprint data hashing."""
 
     def test_hash_network_config(self):
-        """Test hashing network config data."""
+        """Test hashing network config data nested under collectors."""
         data = {
-            "network_config": {
-                "ip_addresses": {"en0": "192.168.1.100"},
-                "arp_cache": ["192.168.1.1 at aa:bb:cc:dd:ee:ff"],
+            "collectors": {
+                "NetworkConfigCollector": {
+                    "ip_addresses": {"en0": "192.168.1.100"},
+                    "arp_cache": ["192.168.1.1 at aa:bb:cc:dd:ee:ff"],
+                }
+            }
+        }
+
+        hashed_data = hash_fingerprint_data(data)
+        net = hashed_data["collectors"]["NetworkConfigCollector"]
+
+        # Verify IPs are hashed
+        assert net["ip_addresses"]["en0"] != "192.168.1.100"
+        assert len(net["ip_addresses"]["en0"]) == 64
+
+        # Verify ARP cache is hashed
+        assert net["arp_cache"][0] != "192.168.1.1 at aa:bb:cc:dd:ee:ff"
+
+    def test_hash_ssh_config(self):
+        """Test hashing SSH config nested under collectors."""
+        data = {
+            "collectors": {
+                "SSHConfigCollector": {
+                    "known_hosts": ["192.168.1.1 ssh-rsa AAAAB3..."]
+                }
             }
         }
 
         hashed_data = hash_fingerprint_data(data)
 
-        # Verify IPs are hashed
-        assert hashed_data["network_config"]["ip_addresses"]["en0"] != "192.168.1.100"
-        assert len(hashed_data["network_config"]["ip_addresses"]["en0"]) == 64
-
-        # Verify ARP cache is hashed
         assert (
-            hashed_data["network_config"]["arp_cache"][0]
-            != data["network_config"]["arp_cache"][0]
+            hashed_data["collectors"]["SSHConfigCollector"]["known_hosts"][0]
+            != "192.168.1.1 ssh-rsa AAAAB3..."
         )
 
-    def test_hash_ssh_config(self):
-        """Test hashing SSH config."""
-        data = {"ssh_config": {"known_hosts": ["192.168.1.1 ssh-rsa AAAAB3..."]}}
+    def test_hash_hosts_file(self):
+        """Test hashing hosts file entries nested under collectors."""
+        data = {
+            "collectors": {
+                "HostsFileCollector": [
+                    "127.0.0.1 localhost",
+                    "# comment line",
+                ]
+            }
+        }
 
         hashed_data = hash_fingerprint_data(data)
+        hosts = hashed_data["collectors"]["HostsFileCollector"]
 
-        assert (
-            hashed_data["ssh_config"]["known_hosts"][0]
-            != data["ssh_config"]["known_hosts"][0]
-        )
+        # Non-comment line should be hashed
+        assert hosts[0] != "127.0.0.1 localhost"
+        # Comment line should be preserved
+        assert hosts[1] == "# comment line"
+
+    def test_hash_without_collectors_key(self):
+        """Test that data without a collectors key is returned unchanged."""
+        data = {"timestamp": "2024-01-01"}
+        assert hash_fingerprint_data(data) == data
 
 
 class TestFingerprintEncryption:
@@ -102,14 +132,10 @@ class TestFingerprintEncryption:
         with pytest.raises(ValueError):
             encryptor2.decrypt(encrypted)
 
-    def test_encrypt_without_password(self):
-        """Test encryption without password."""
-        data = {"test": "data"}
-
-        encryptor = FingerprintEncryption()
-        encrypted = encryptor.encrypt(data)
-
-        assert "encrypted_data" in encrypted
+    def test_encrypt_without_password_raises(self):
+        """Test that encryption without password raises ValueError."""
+        with pytest.raises(ValueError, match="password is required"):
+            FingerprintEncryption()
 
     def test_integrity_hash(self):
         """Test integrity hash computation."""

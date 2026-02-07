@@ -324,6 +324,12 @@ class FingerPrintApp(QMainWindow):
         if self.auto_export_checkbox.isChecked():
             self.export_fingerprint()
 
+        # If this was a scheduled scan, chain the comparison now that
+        # creation is complete (avoids the previous fixed-timer race).
+        if getattr(self, "_pending_scheduled_compare", False):
+            self._pending_scheduled_compare = False
+            self.compare_fingerprints()
+
     def on_fingerprint_error(self, error):
         """Handle fingerprint creation error."""
         self.scan_progress.setVisible(False)
@@ -412,9 +418,9 @@ class FingerPrintApp(QMainWindow):
             self.show_warning("Failed to schedule scan", str(e))
 
     def scheduled_scan(self):
-        """Execute scheduled scan."""
+        """Execute scheduled scan and compare after creation completes."""
+        self._pending_scheduled_compare = True
         self.create_fingerprint()
-        QTimer.singleShot(5000, self.compare_fingerprints)  # Compare after creation
 
     def cancel_scheduled_scan(self):
         """Cancel scheduled scan."""
@@ -435,12 +441,10 @@ class FingerPrintApp(QMainWindow):
             self, "Export Fingerprint", "", "JSON Files (*.json)"
         )
         if filename:
-            try:
-                with open(filename, "w") as f:
-                    json.dump(self.current_fingerprint, f, indent=2)
+            if save_fingerprint(self.current_fingerprint, filename):
                 self.update_status(f"Fingerprint exported to {filename}", 5000)
-            except Exception as e:
-                self.show_error("Export Failed", str(e))
+            else:
+                self.show_error("Export Failed", "Could not save fingerprint")
 
     def export_comparison(self):
         """Export comparison results."""

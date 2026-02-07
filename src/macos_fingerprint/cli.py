@@ -16,6 +16,10 @@ from .core.comparison import (
 
 def cmd_create(args):
     """Create a new fingerprint."""
+    if args.encrypt and not args.password:
+        print("Error: --password is required when using --encrypt", file=sys.stderr)
+        sys.exit(1)
+
     print("Creating fingerprint...")
 
     fingerprint = create_fingerprint(hash_sensitive=not args.no_hash)

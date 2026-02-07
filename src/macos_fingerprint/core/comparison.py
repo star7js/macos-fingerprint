@@ -2,10 +2,13 @@
 Fingerprint comparison with diff-style output and severity classification.
 """
 
+import html
 import json
 from typing import Dict, Any, List
 from enum import Enum
 from datetime import datetime
+
+from ..utils.commands import safe_write_file
 
 
 class ChangeSeverity(Enum):
@@ -224,6 +227,11 @@ def compare_fingerprints(
     return differences
 
 
+def _esc(value: Any) -> str:
+    """HTML-escape a value for safe interpolation into markup."""
+    return html.escape(str(value))
+
+
 def export_comparison_html(differences: Dict[str, Any], filename: str) -> bool:
     """
     Export comparison results as HTML.
@@ -236,7 +244,7 @@ def export_comparison_html(differences: Dict[str, Any], filename: str) -> bool:
         True if successful, False otherwise
     """
     try:
-        html = f"""<!DOCTYPE html>
+        markup = f"""<!DOCTYPE html>
 <html>
 <head>
     <title>MacBook Fingerprint Comparison</title>
@@ -288,56 +296,53 @@ def export_comparison_html(differences: Dict[str, Any], filename: str) -> bool:
 
     <div class="summary">
         <h2>Summary</h2>
-        <p><strong>Baseline:</strong> {differences['baseline_timestamp']}</p>
-        <p><strong>Current:</strong> {differences['current_timestamp']}</p>
-        <p><strong>Total Changes:</strong> {differences['summary']['total_changes']}</p>
-        <p><strong>Critical:</strong> {differences['summary']['critical']} |
-           <strong>High:</strong> {differences['summary']['high']} |
-           <strong>Medium:</strong> {differences['summary']['medium']} |
-           <strong>Low:</strong> {differences['summary']['low']}</p>
+        <p><strong>Baseline:</strong> {_esc(differences['baseline_timestamp'])}</p>
+        <p><strong>Current:</strong> {_esc(differences['current_timestamp'])}</p>
+        <p><strong>Total Changes:</strong> {_esc(differences['summary']['total_changes'])}</p>
+        <p><strong>Critical:</strong> {_esc(differences['summary']['critical'])} |
+           <strong>High:</strong> {_esc(differences['summary']['high'])} |
+           <strong>Medium:</strong> {_esc(differences['summary']['medium'])} |
+           <strong>Low:</strong> {_esc(differences['summary']['low'])}</p>
     </div>
 
     <h2>Changes</h2>
 """
 
         for collector, change in differences["changes"].items():
-            severity = change["severity"]
-            html += f"""
+            severity = _esc(change["severity"])
+            markup += f"""
     <div class="change {severity}">
-        <h3>{collector} <span style="color: #888; font-size: 0.8em;">({severity})</span></h3>
+        <h3>{_esc(collector)} <span style="color: #888; font-size: 0.8em;">({severity})</span></h3>
 """
 
             if "added" in change:
-                html += f"""
-        <p><strong class="added">Added ({len(change['added'])}):</strong></p>
-        <pre>{json.dumps(change['added'], indent=2)}</pre>
+                markup += f"""
+        <p><strong class="added">Added ({_esc(len(change['added']))}):</strong></p>
+        <pre>{_esc(json.dumps(change['added'], indent=2))}</pre>
 """
 
             if "removed" in change:
-                html += f"""
-        <p><strong class="removed">Removed ({len(change['removed'])}):</strong></p>
-        <pre>{json.dumps(change['removed'], indent=2)}</pre>
+                markup += f"""
+        <p><strong class="removed">Removed ({_esc(len(change['removed']))}):</strong></p>
+        <pre>{_esc(json.dumps(change['removed'], indent=2))}</pre>
 """
 
             if "changes" in change:
-                html += f"""
+                markup += f"""
         <p><strong>Changes:</strong></p>
-        <pre>{json.dumps(change['changes'], indent=2)}</pre>
+        <pre>{_esc(json.dumps(change['changes'], indent=2))}</pre>
 """
 
-            html += """
+            markup += """
     </div>
 """
 
-        html += """
+        markup += """
 </body>
 </html>
 """
 
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(html)
-
-        return True
+        return safe_write_file(filename, markup, permissions=0o600)
     except Exception as e:
         print(f"Error exporting HTML: {e}")
         return False
@@ -355,9 +360,8 @@ def export_comparison_json(differences: Dict[str, Any], filename: str) -> bool:
         True if successful, False otherwise
     """
     try:
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(differences, f, indent=2)
-        return True
+        content = json.dumps(differences, indent=2)
+        return safe_write_file(filename, content, permissions=0o600)
     except Exception as e:
         print(f"Error exporting JSON: {e}")
         return False

@@ -3,10 +3,11 @@ Cryptographic utilities for hashing and encrypting sensitive fingerprint data.
 """
 
 import hashlib
+import hmac
 import json
 import secrets
 import base64
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -31,94 +32,99 @@ def hash_sensitive_value(value: str, algorithm: str = "sha3_256") -> str:
     return hasher.hexdigest()
 
 
+def _hash_network_config(net_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Hash sensitive fields within a network config dict."""
+    net_config = net_config.copy()
+
+    if "ip_addresses" in net_config and isinstance(net_config["ip_addresses"], dict):
+        net_config["ip_addresses"] = {
+            service: hash_sensitive_value(ip)
+            for service, ip in net_config["ip_addresses"].items()
+        }
+
+    if "arp_cache" in net_config and isinstance(net_config["arp_cache"], list):
+        net_config["arp_cache"] = [
+            hash_sensitive_value(line) if line else ""
+            for line in net_config["arp_cache"]
+        ]
+
+    if "routing_table" in net_config and isinstance(net_config["routing_table"], list):
+        net_config["routing_table"] = [
+            hash_sensitive_value(line) if line else ""
+            for line in net_config["routing_table"]
+        ]
+
+    if "wifi_networks" in net_config and isinstance(net_config["wifi_networks"], list):
+        net_config["wifi_networks"] = [
+            hash_sensitive_value(line) if line else ""
+            for line in net_config["wifi_networks"]
+        ]
+
+    return net_config
+
+
+def _hash_ssh_config(ssh_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Hash sensitive fields within an SSH config dict."""
+    ssh_config = ssh_config.copy()
+    if "known_hosts" in ssh_config and isinstance(ssh_config["known_hosts"], list):
+        ssh_config["known_hosts"] = [
+            hash_sensitive_value(line) if line else ""
+            for line in ssh_config["known_hosts"]
+        ]
+    return ssh_config
+
+
+def _hash_hosts_file(hosts_data: list) -> list:
+    """Hash non-comment entries in a hosts file list."""
+    return [
+        hash_sensitive_value(line) if line and not line.startswith("#") else line
+        for line in hosts_data
+    ]
+
+
+# Map collector names to the hashing function for their data.
+_COLLECTOR_HASHERS: Dict[str, Callable] = {
+    "NetworkConfigCollector": _hash_network_config,
+    "SSHConfigCollector": _hash_ssh_config,
+    "HostsFileCollector": _hash_hosts_file,
+}
+
+
 def hash_fingerprint_data(
     data: Dict[str, Any], sensitive_fields: Optional[list] = None
 ) -> Dict[str, Any]:
     """
     Hash sensitive fields in fingerprint data while preserving structure.
 
-    Default sensitive fields:
-    - IP addresses
-    - MAC addresses
-    - SSH known_hosts
-    - ARP cache entries
-    - Network interface details
+    Operates on the ``collectors`` sub-dict of a fingerprint, matching
+    collector names to their corresponding hashing logic.
+
+    Default sensitive collectors:
+    - NetworkConfigCollector  (IP addresses, ARP cache, routing table, WiFi)
+    - SSHConfigCollector      (known_hosts)
+    - HostsFileCollector      (hosts file entries)
 
     Args:
         data: The fingerprint data dictionary
-        sensitive_fields: Custom list of fields to hash (optional)
+        sensitive_fields: Custom list of fields to hash (optional, unused -
+            kept for backwards compatibility)
 
     Returns:
         Dictionary with sensitive fields hashed
     """
-    if sensitive_fields is None:
-        sensitive_fields = [
-            "ip_addresses",
-            "arp_cache",
-            "known_hosts",
-            "wifi_networks",
-            "routing_table",
-        ]
-
     hashed_data = data.copy()
+    collectors = hashed_data.get("collectors")
+    if not isinstance(collectors, dict):
+        return hashed_data
 
-    # Hash network config sensitive data
-    if "network_config" in hashed_data:
-        net_config = hashed_data["network_config"].copy()
+    hashed_collectors = collectors.copy()
+    for collector_name, hasher in _COLLECTOR_HASHERS.items():
+        if collector_name in hashed_collectors:
+            collector_data = hashed_collectors[collector_name]
+            if isinstance(collector_data, (dict, list)):
+                hashed_collectors[collector_name] = hasher(collector_data)
 
-        # Hash IP addresses
-        if "ip_addresses" in net_config and isinstance(
-            net_config["ip_addresses"], dict
-        ):
-            net_config["ip_addresses"] = {
-                service: hash_sensitive_value(ip)
-                for service, ip in net_config["ip_addresses"].items()
-            }
-
-        # Hash ARP cache
-        if "arp_cache" in net_config and isinstance(net_config["arp_cache"], list):
-            net_config["arp_cache"] = [
-                hash_sensitive_value(line) if line else ""
-                for line in net_config["arp_cache"]
-            ]
-
-        # Hash routing table
-        if "routing_table" in net_config and isinstance(
-            net_config["routing_table"], list
-        ):
-            net_config["routing_table"] = [
-                hash_sensitive_value(line) if line else ""
-                for line in net_config["routing_table"]
-            ]
-
-        # Hash WiFi networks (contains MAC addresses)
-        if "wifi_networks" in net_config and isinstance(
-            net_config["wifi_networks"], list
-        ):
-            net_config["wifi_networks"] = [
-                hash_sensitive_value(line) if line else ""
-                for line in net_config["wifi_networks"]
-            ]
-
-        hashed_data["network_config"] = net_config
-
-    # Hash SSH known_hosts
-    if "ssh_config" in hashed_data and isinstance(hashed_data["ssh_config"], dict):
-        ssh_config = hashed_data["ssh_config"].copy()
-        if "known_hosts" in ssh_config and isinstance(ssh_config["known_hosts"], list):
-            ssh_config["known_hosts"] = [
-                hash_sensitive_value(line) if line else ""
-                for line in ssh_config["known_hosts"]
-            ]
-        hashed_data["ssh_config"] = ssh_config
-
-    # Hash hosts file entries
-    if "hosts_file" in hashed_data and isinstance(hashed_data["hosts_file"], list):
-        hashed_data["hosts_file"] = [
-            hash_sensitive_value(line) if line and not line.startswith("#") else line
-            for line in hashed_data["hosts_file"]
-        ]
-
+    hashed_data["collectors"] = hashed_collectors
     return hashed_data
 
 
@@ -129,24 +135,29 @@ class FingerprintEncryption:
 
     def __init__(self, password: Optional[str] = None):
         """
-        Initialize encryption with a password or generate a random key.
+        Initialize encryption with a password for key derivation.
 
         Args:
-            password: Optional password for key derivation
+            password: Password for key derivation. Required for both
+                encryption and decryption.
+
+        Raises:
+            ValueError: If password is not provided
         """
+        if not password:
+            raise ValueError(
+                "A password is required for encryption. "
+                "Without a password, encrypted data cannot be decrypted."
+            )
         self.password = password
         self._key = None
 
     def _derive_key(self, salt: bytes) -> bytes:
         """Derive encryption key from password using PBKDF2."""
-        if self.password:
-            kdf = PBKDF2HMAC(
-                algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000
-            )
-            return kdf.derive(self.password.encode("utf-8"))
-        else:
-            # Generate random key
-            return secrets.token_bytes(32)
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000
+        )
+        return kdf.derive(self.password.encode("utf-8"))
 
     def encrypt(self, data: Dict[str, Any]) -> Dict[str, str]:
         """
@@ -208,9 +219,15 @@ class FingerprintEncryption:
             raise ValueError(f"Decryption failed: {str(e)}")
 
 
+_INTEGRITY_KEY = b"macos-fingerprint-integrity-v1"
+
+
 def compute_integrity_hash(data: Dict[str, Any]) -> str:
     """
     Compute HMAC-SHA256 for integrity verification.
+
+    Uses a fixed application-level key so that the hash cannot be trivially
+    recomputed by modifying the data alone.
 
     Args:
         data: Dictionary to hash
@@ -219,4 +236,4 @@ def compute_integrity_hash(data: Dict[str, Any]) -> str:
         Hex-encoded HMAC
     """
     serialized = json.dumps(data, sort_keys=True).encode("utf-8")
-    return hashlib.sha256(serialized).hexdigest()
+    return hmac.new(_INTEGRITY_KEY, serialized, hashlib.sha256).hexdigest()
