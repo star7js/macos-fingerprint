@@ -20,6 +20,7 @@ def clean_registry():
     CollectorRegistry._collectors = {}
 
 
+@pytest.mark.slow
 class TestRegisterAllCollectors:
     """Test collector registration."""
 
@@ -39,6 +40,7 @@ class TestRegisterAllCollectors:
         assert any("user" in name.lower() for name in collector_names)
 
 
+@pytest.mark.slow
 class TestCreateFingerprint:
     """Test create_fingerprint function."""
 
@@ -164,6 +166,7 @@ class TestHashFingerprint:
         assert len(hash_value) == 64
 
 
+@pytest.mark.slow
 class TestIntegration:
     """Integration tests for fingerprint workflow."""
 

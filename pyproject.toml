@@ -47,3 +47,8 @@ macos-fingerprint-gui = "macos_fingerprint.gui:main"
 [project.urls]
 Homepage = "https://github.com/star7js/macos-fingerprint"
 "Bug Tracker" = "https://github.com/star7js/macos-fingerprint/issues"
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: tests that are slow or rely on system collectors",
+]

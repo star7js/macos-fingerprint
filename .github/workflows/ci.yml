@@ -42,7 +42,11 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest tests/ -v --cov=src/macos_fingerprint --cov-report=xml --cov-report=term --cov-fail-under=25
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          pytest tests/ -v --cov=src/macos_fingerprint --cov-report=xml --cov-report=term --cov-fail-under=25 -m "not slow"
+        else
+          pytest tests/ -v --cov=src/macos_fingerprint --cov-report=xml --cov-report=term --cov-fail-under=25
+        fi
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
