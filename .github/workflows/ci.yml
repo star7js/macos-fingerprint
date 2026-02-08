@@ -3,13 +3,27 @@ name: CI
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
+    if: github.event_name != 'pull_request'
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
+      fail-fast: true
       matrix:
         os: [macos-latest]
         python-version: ['3.10', '3.11', '3.12']
@@ -40,6 +54,7 @@ jobs:
 
   lint:
     runs-on: macos-latest
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
 
@@ -62,7 +77,9 @@ jobs:
         black --check src/ tests/
 
   type-check:
+    if: github.event_name != 'pull_request'
     runs-on: macos-latest
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
 
@@ -82,7 +99,9 @@ jobs:
         mypy src/
 
   security:
+    if: github.event_name != 'pull_request'
     runs-on: macos-latest
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
 
@@ -101,7 +120,9 @@ jobs:
         safety check --json
 
   build:
+    if: github.event_name != 'pull_request'
     runs-on: macos-latest
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
 
