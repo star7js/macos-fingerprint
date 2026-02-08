@@ -28,7 +28,11 @@ from PyQt5.QtGui import QFont, QPalette, QColor
 
 from .core.fingerprint import create_fingerprint
 from .core.storage import save_fingerprint, load_fingerprint
-from .core.comparison import compare_fingerprints
+from .core.comparison import (
+    compare_fingerprints,
+    export_comparison_html,
+    export_comparison_json,
+)
 
 
 class FingerprintWorker(QThread):
@@ -93,6 +97,7 @@ class FingerPrintApp(QMainWindow):
         self.settings = QSettings("MacBookFingerprint", "MacBookFingerprint")
         self.current_fingerprint = None
         self.baseline_fingerprint = None
+        self.last_comparison = None
         self.theme = self.settings.value("theme", "light")
         self.custom_colors = {
             "background": self.settings.value("custom_background", "#FFFFFF"),
@@ -100,6 +105,8 @@ class FingerPrintApp(QMainWindow):
             "button": self.settings.value("custom_button", "#E0E0E0"),
         }
         self.worker = None
+        # Collect action buttons so we can disable them during operations.
+        self._action_buttons = []
 
     def init_ui(self):
         """Initialize user interface."""
@@ -149,10 +156,11 @@ class FingerPrintApp(QMainWindow):
         scan_tab = QWidget()
         scan_layout = QVBoxLayout(scan_tab)
 
-        scan_button = self.create_button(
+        self.scan_button = self.create_button(
             "Create New Fingerprint", QStyle.SP_BrowserReload, self.create_fingerprint
         )
-        scan_layout.addWidget(scan_button)
+        scan_layout.addWidget(self.scan_button)
+        self._action_buttons.append(self.scan_button)
 
         self.scan_progress = QProgressBar()
         self.scan_progress.setVisible(False)
@@ -165,10 +173,11 @@ class FingerPrintApp(QMainWindow):
         self.scan_result = self.create_text_edit()
         scan_layout.addWidget(self.scan_result)
 
-        export_button = self.create_button(
+        self.export_fp_button = self.create_button(
             "Export Fingerprint", QStyle.SP_DialogSaveButton, self.export_fingerprint
         )
-        scan_layout.addWidget(export_button)
+        scan_layout.addWidget(self.export_fp_button)
+        self._action_buttons.append(self.export_fp_button)
 
         self.tabs.addTab(
             scan_tab, self.style().standardIcon(QStyle.SP_FileIcon), "Scan"
@@ -179,12 +188,29 @@ class FingerPrintApp(QMainWindow):
         compare_tab = QWidget()
         compare_layout = QVBoxLayout(compare_tab)
 
-        compare_button = self.create_button(
+        # Baseline selection row
+        baseline_row = QHBoxLayout()
+        self.baseline_label = QLabel("Baseline: (default)")
+        self.baseline_label.setFont(QFont("Arial", 10))
+        baseline_row.addWidget(self.baseline_label, 1)
+
+        self.load_baseline_button = QPushButton("Load Baseline...")
+        self.load_baseline_button.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogOpenButton)
+        )
+        self.load_baseline_button.clicked.connect(self.load_baseline_file)
+        baseline_row.addWidget(self.load_baseline_button)
+        self._action_buttons.append(self.load_baseline_button)
+
+        compare_layout.addLayout(baseline_row)
+
+        self.compare_button = self.create_button(
             "Compare with Baseline",
             QStyle.SP_FileDialogContentsView,
             self.compare_fingerprints,
         )
-        compare_layout.addWidget(compare_button)
+        compare_layout.addWidget(self.compare_button)
+        self._action_buttons.append(self.compare_button)
 
         self.compare_progress = QProgressBar()
         self.compare_progress.setVisible(False)
@@ -197,10 +223,11 @@ class FingerPrintApp(QMainWindow):
         self.compare_result = self.create_text_edit()
         compare_layout.addWidget(self.compare_result)
 
-        export_button = self.create_button(
+        self.export_cmp_button = self.create_button(
             "Export Comparison", QStyle.SP_DialogSaveButton, self.export_comparison
         )
-        compare_layout.addWidget(export_button)
+        compare_layout.addWidget(self.export_cmp_button)
+        self._action_buttons.append(self.export_cmp_button)
 
         self.tabs.addTab(
             compare_tab,
@@ -221,6 +248,7 @@ class FingerPrintApp(QMainWindow):
             "Schedule Daily Scan", QStyle.SP_BrowserReload, self.schedule_scan
         )
         schedule_layout.addWidget(schedule_button)
+        self._action_buttons.append(schedule_button)
 
         cancel_schedule_button = self.create_button(
             "Cancel Scheduled Scan", QStyle.SP_BrowserStop, self.cancel_scheduled_scan
@@ -294,14 +322,25 @@ class FingerPrintApp(QMainWindow):
         text_edit.setFont(QFont("Courier", 12))
         return text_edit
 
+    # ------------------------------------------------------------------
+    # Button enable / disable helpers
+    # ------------------------------------------------------------------
+
+    def _set_buttons_enabled(self, enabled: bool):
+        """Enable or disable all action buttons."""
+        for button in self._action_buttons:
+            button.setEnabled(enabled)
+
+    # ------------------------------------------------------------------
+    # Scan / create fingerprint
+    # ------------------------------------------------------------------
+
     def create_fingerprint(self):
         """Create a new fingerprint using worker thread."""
         if self.worker and self.worker.isRunning():
-            self.show_warning(
-                "Operation in Progress", "Please wait for current operation to complete"
-            )
             return
 
+        self._set_buttons_enabled(False)
         self.scan_progress.setVisible(True)
         self.scan_progress.setRange(0, 0)  # Indeterminate progress
         self.update_status("Creating fingerprint...")
@@ -315,11 +354,11 @@ class FingerPrintApp(QMainWindow):
     def on_fingerprint_created(self, fingerprint):
         """Handle successful fingerprint creation."""
         self.current_fingerprint = fingerprint
-        save_fingerprint(self.current_fingerprint, "fingerprint_baseline.json")
         self.scan_result.setText(json.dumps(self.current_fingerprint, indent=2))
         self.scan_progress.setVisible(False)
         self.scan_status.setText("")
-        self.update_status("Fingerprint created and saved", 5000)
+        self._set_buttons_enabled(True)
+        self.update_status("Fingerprint created", 5000)
 
         if self.auto_export_checkbox.isChecked():
             self.export_fingerprint()
@@ -334,25 +373,55 @@ class FingerPrintApp(QMainWindow):
         """Handle fingerprint creation error."""
         self.scan_progress.setVisible(False)
         self.scan_status.setText("")
+        self._set_buttons_enabled(True)
         self.show_error("Failed to create fingerprint", error)
 
     def on_fingerprint_progress(self, message):
         """Update progress message."""
         self.scan_status.setText(message)
 
+    # ------------------------------------------------------------------
+    # Compare
+    # ------------------------------------------------------------------
+
+    def load_baseline_file(self):
+        """Let the user pick a baseline fingerprint file."""
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Select Baseline Fingerprint", "", "JSON Files (*.json);;All Files (*)"
+        )
+        if not filename:
+            return
+
+        loaded = load_fingerprint(filename)
+        if loaded:
+            self.baseline_fingerprint = loaded
+            # Show just the filename, not the full path.
+            short = filename.rsplit("/", 1)[-1]
+            self.baseline_label.setText(f"Baseline: {short}")
+            self.update_status(f"Baseline loaded from {short}", 5000)
+        else:
+            self.show_warning(
+                "Load Failed", f"Could not load fingerprint from {filename}"
+            )
+
     def compare_fingerprints(self):
         """Compare current system with baseline."""
         if self.worker and self.worker.isRunning():
-            self.show_warning(
-                "Operation in Progress", "Please wait for current operation to complete"
-            )
             return
 
         try:
-            self.baseline_fingerprint = load_fingerprint("fingerprint_baseline.json")
+            # Use the explicitly-loaded baseline, or fall back to default file.
             if not self.baseline_fingerprint:
-                raise FileNotFoundError("No baseline fingerprint found")
+                self.baseline_fingerprint = load_fingerprint(
+                    "fingerprint_baseline.json"
+                )
+            if not self.baseline_fingerprint:
+                raise FileNotFoundError(
+                    "No baseline fingerprint found. Create one first, or use "
+                    "'Load Baseline...' to select a file."
+                )
 
+            self._set_buttons_enabled(False)
             self.compare_progress.setVisible(True)
             self.compare_progress.setRange(0, 0)
             self.update_status("Comparing fingerprints...")
@@ -370,8 +439,10 @@ class FingerPrintApp(QMainWindow):
 
     def on_comparison_complete(self, differences):
         """Handle successful comparison."""
+        self.last_comparison = differences
         self.compare_progress.setVisible(False)
         self.compare_status.setText("")
+        self._set_buttons_enabled(True)
 
         summary = differences["summary"]
         if summary["total_changes"] == 0:
@@ -396,11 +467,16 @@ class FingerPrintApp(QMainWindow):
         """Handle comparison error."""
         self.compare_progress.setVisible(False)
         self.compare_status.setText("")
+        self._set_buttons_enabled(True)
         self.show_error("Comparison Failed", error)
 
     def on_comparison_progress(self, message):
         """Update comparison progress message."""
         self.compare_status.setText(message)
+
+    # ------------------------------------------------------------------
+    # Schedule
+    # ------------------------------------------------------------------
 
     def schedule_scan(self):
         """Schedule a daily scan."""
@@ -431,6 +507,10 @@ class FingerPrintApp(QMainWindow):
         else:
             self.show_info("No scheduled scan to cancel")
 
+    # ------------------------------------------------------------------
+    # Export
+    # ------------------------------------------------------------------
+
     def export_fingerprint(self):
         """Export current fingerprint."""
         if not self.current_fingerprint:
@@ -448,7 +528,7 @@ class FingerPrintApp(QMainWindow):
 
     def export_comparison(self):
         """Export comparison results."""
-        if not self.compare_result.toPlainText():
+        if not self.last_comparison:
             self.show_warning("No Comparison", "Run a comparison first")
             return
 
@@ -458,21 +538,37 @@ class FingerPrintApp(QMainWindow):
         if filename:
             try:
                 if filename.endswith(".html"):
-                    # Export as HTML would require the comparison result
-                    self.show_info(
-                        "HTML export requires running comparison through CLI"
-                    )
+                    if export_comparison_html(self.last_comparison, filename):
+                        self.update_status(
+                            f"Comparison exported to {filename}", 5000
+                        )
+                    else:
+                        self.show_error("Export Failed", "Could not write HTML file")
                 else:
-                    with open(filename, "w") as f:
-                        f.write(self.compare_result.toPlainText())
-                self.update_status(f"Comparison exported to {filename}", 5000)
+                    if export_comparison_json(self.last_comparison, filename):
+                        self.update_status(
+                            f"Comparison exported to {filename}", 5000
+                        )
+                    else:
+                        self.show_error("Export Failed", "Could not write JSON file")
             except Exception as e:
                 self.show_error("Export Failed", str(e))
+
+    # ------------------------------------------------------------------
+    # Theme / settings
+    # ------------------------------------------------------------------
 
     def on_theme_changed(self, theme):
         """Handle theme change."""
         self.theme = theme.lower()
+        self._update_custom_color_visibility()
         self.apply_theme()
+
+    def _update_custom_color_visibility(self):
+        """Show custom color buttons only when the Custom theme is selected."""
+        visible = self.theme == "custom"
+        for button in self.custom_color_buttons.values():
+            button.setVisible(visible)
 
     def choose_custom_color(self, color_name):
         """Choose custom color."""
@@ -566,6 +662,11 @@ class FingerPrintApp(QMainWindow):
             self.custom_color_buttons[color_name].setStyleSheet(
                 f"background-color: {self.custom_colors[color_name]};"
             )
+        self._update_custom_color_visibility()
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
 
     def update_status(self, message, timeout=0):
         """Update status bar message."""
