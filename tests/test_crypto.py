@@ -64,9 +64,7 @@ class TestHashFingerprintData:
         """Test hashing SSH config nested under collectors."""
         data = {
             "collectors": {
-                "SSHConfigCollector": {
-                    "known_hosts": ["192.168.1.1 ssh-rsa AAAAB3..."]
-                }
+                "SSHConfigCollector": {"known_hosts": ["192.168.1.1 ssh-rsa AAAAB3..."]}
             }
         }
 

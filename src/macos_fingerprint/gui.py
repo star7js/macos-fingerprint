@@ -387,7 +387,10 @@ class FingerPrintApp(QMainWindow):
     def load_baseline_file(self):
         """Let the user pick a baseline fingerprint file."""
         filename, _ = QFileDialog.getOpenFileName(
-            self, "Select Baseline Fingerprint", "", "JSON Files (*.json);;All Files (*)"
+            self,
+            "Select Baseline Fingerprint",
+            "",
+            "JSON Files (*.json);;All Files (*)",
         )
         if not filename:
             return
@@ -539,16 +542,12 @@ class FingerPrintApp(QMainWindow):
             try:
                 if filename.endswith(".html"):
                     if export_comparison_html(self.last_comparison, filename):
-                        self.update_status(
-                            f"Comparison exported to {filename}", 5000
-                        )
+                        self.update_status(f"Comparison exported to {filename}", 5000)
                     else:
                         self.show_error("Export Failed", "Could not write HTML file")
                 else:
                     if export_comparison_json(self.last_comparison, filename):
-                        self.update_status(
-                            f"Comparison exported to {filename}", 5000
-                        )
+                        self.update_status(f"Comparison exported to {filename}", 5000)
                     else:
                         self.show_error("Export Failed", "Could not write JSON file")
             except Exception as e:
