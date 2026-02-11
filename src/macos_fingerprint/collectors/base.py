@@ -69,34 +69,35 @@ class BaseCollector(ABC):
 
 class CollectorRegistry:
     """
-    Registry for automatic collector discovery and management.
+    Registry for collector discovery and management.
+
+    Each instance maintains its own independent set of collectors,
+    avoiding shared mutable class-level state.
     """
 
-    _collectors: Dict[str, BaseCollector] = {}
+    def __init__(self) -> None:
+        self._collectors: Dict[str, BaseCollector] = {}
 
-    @classmethod
-    def register(cls, collector: BaseCollector) -> None:
+    def register(self, collector: BaseCollector) -> None:
         """
         Register a collector.
 
         Args:
             collector: Collector instance to register
         """
-        cls._collectors[collector.name] = collector
+        self._collectors[collector.name] = collector
 
-    @classmethod
-    def unregister(cls, name: str) -> None:
+    def unregister(self, name: str) -> None:
         """
         Unregister a collector by name.
 
         Args:
             name: Name of collector to unregister
         """
-        if name in cls._collectors:
-            del cls._collectors[name]
+        if name in self._collectors:
+            del self._collectors[name]
 
-    @classmethod
-    def get_collector(cls, name: str) -> Optional[BaseCollector]:
+    def get_collector(self, name: str) -> Optional[BaseCollector]:
         """
         Get a collector by name.
 
@@ -106,21 +107,19 @@ class CollectorRegistry:
         Returns:
             Collector instance or None
         """
-        return cls._collectors.get(name)
+        return self._collectors.get(name)
 
-    @classmethod
-    def get_all_collectors(cls) -> List[BaseCollector]:
+    def get_all_collectors(self) -> List[BaseCollector]:
         """
         Get all registered collectors.
 
         Returns:
             List of all collector instances
         """
-        return list(cls._collectors.values())
+        return list(self._collectors.values())
 
-    @classmethod
     def get_collectors_by_category(
-        cls, category: CollectorCategory
+        self, category: CollectorCategory
     ) -> List[BaseCollector]:
         """
         Get collectors by category.
@@ -133,12 +132,11 @@ class CollectorRegistry:
         """
         return [
             collector
-            for collector in cls._collectors.values()
+            for collector in self._collectors.values()
             if collector.category == category
         ]
 
-    @classmethod
-    def collect_all(cls) -> Dict[str, CollectorResult]:
+    def collect_all(self) -> Dict[str, CollectorResult]:
         """
         Execute all registered collectors.
 
@@ -146,11 +144,14 @@ class CollectorRegistry:
             Dictionary mapping collector names to results
         """
         results = {}
-        for name, collector in cls._collectors.items():
+        for name, collector in self._collectors.items():
             results[name] = collector.safe_collect()
         return results
 
-    @classmethod
-    def clear(cls) -> None:
+    def clear(self) -> None:
         """Clear all registered collectors."""
-        cls._collectors.clear()
+        self._collectors.clear()
+
+
+# Module-level default registry for convenience.
+default_registry = CollectorRegistry()

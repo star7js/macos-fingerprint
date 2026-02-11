@@ -3,7 +3,11 @@ Tests for collector modules.
 """
 
 from unittest.mock import patch
-from macos_fingerprint.collectors.base import CollectorResult, CollectorRegistry
+from macos_fingerprint.collectors.base import (
+    CollectorResult,
+    CollectorRegistry,
+    CollectorCategory,
+)
 from macos_fingerprint.collectors.apps import InstalledAppsCollector
 from macos_fingerprint.collectors.system import SystemInfoCollector
 
@@ -33,37 +37,76 @@ class TestBaseCollector:
 class TestCollectorRegistry:
     """Test collector registry."""
 
-    def setup_method(self):
-        """Clear registry before each test."""
-        CollectorRegistry.clear()
-
     def test_register_collector(self):
         """Test registering a collector."""
+        registry = CollectorRegistry()
         collector = InstalledAppsCollector()
-        CollectorRegistry.register(collector)
+        registry.register(collector)
 
-        registered = CollectorRegistry.get_collector("InstalledAppsCollector")
+        registered = registry.get_collector("InstalledAppsCollector")
         assert registered is not None
         assert registered.name == "InstalledAppsCollector"
 
     def test_get_all_collectors(self):
         """Test getting all collectors."""
+        registry = CollectorRegistry()
         collector1 = InstalledAppsCollector()
         collector2 = SystemInfoCollector()
 
-        CollectorRegistry.register(collector1)
-        CollectorRegistry.register(collector2)
+        registry.register(collector1)
+        registry.register(collector2)
 
-        all_collectors = CollectorRegistry.get_all_collectors()
+        all_collectors = registry.get_all_collectors()
         assert len(all_collectors) == 2
 
     def test_unregister_collector(self):
         """Test unregistering a collector."""
+        registry = CollectorRegistry()
         collector = InstalledAppsCollector()
-        CollectorRegistry.register(collector)
+        registry.register(collector)
 
-        CollectorRegistry.unregister("InstalledAppsCollector")
-        assert CollectorRegistry.get_collector("InstalledAppsCollector") is None
+        registry.unregister("InstalledAppsCollector")
+        assert registry.get_collector("InstalledAppsCollector") is None
+
+    def test_clear_registry(self):
+        """Test clearing the registry."""
+        registry = CollectorRegistry()
+        registry.register(InstalledAppsCollector())
+        registry.register(SystemInfoCollector())
+        assert len(registry.get_all_collectors()) == 2
+
+        registry.clear()
+        assert len(registry.get_all_collectors()) == 0
+
+    def test_separate_instances_are_independent(self):
+        """Test that two registry instances do not share state."""
+        reg_a = CollectorRegistry()
+        reg_b = CollectorRegistry()
+
+        reg_a.register(InstalledAppsCollector())
+        assert len(reg_a.get_all_collectors()) == 1
+        assert len(reg_b.get_all_collectors()) == 0
+
+    def test_get_collectors_by_category(self):
+        """Test filtering collectors by category."""
+        registry = CollectorRegistry()
+        registry.register(InstalledAppsCollector())
+        registry.register(SystemInfoCollector())
+
+        apps = registry.get_collectors_by_category(CollectorCategory.APPS)
+        assert len(apps) == 1
+        assert apps[0].name == "InstalledAppsCollector"
+
+    @patch("macos_fingerprint.collectors.apps.run_command")
+    def test_collect_all(self, mock_run_command):
+        """Test collecting from all registered collectors."""
+        mock_run_command.return_value = None  # All commands return None
+        registry = CollectorRegistry()
+        registry.register(InstalledAppsCollector())
+
+        results = registry.collect_all()
+        assert "InstalledAppsCollector" in results
+        assert results["InstalledAppsCollector"].success
 
 
 @patch("macos_fingerprint.collectors.apps.run_command")

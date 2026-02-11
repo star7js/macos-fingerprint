@@ -3,6 +3,7 @@ Command-line interface for macOS Fingerprint.
 """
 
 import argparse
+import getpass
 import sys
 
 from .core.fingerprint import create_fingerprint, hash_fingerprint
@@ -14,18 +15,43 @@ from .core.comparison import (
 )
 
 
+def _resolve_password(args) -> str:
+    """Resolve password from --password, --password-file, or interactive prompt.
+
+    Returns:
+        The resolved password string.
+    """
+    if args.password:
+        return args.password
+    if getattr(args, "password_file", None):
+        try:
+            with open(args.password_file, "r") as f:
+                return f.read().strip()
+        except OSError as e:
+            print(f"Error: Cannot read password file: {e}", file=sys.stderr)
+            sys.exit(1)
+    # Interactive prompt (only when stdin is a terminal)
+    if sys.stdin.isatty():
+        return getpass.getpass("Password: ")
+    print(
+        "Error: --password or --password-file is required in non-interactive mode",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
 def cmd_create(args):
     """Create a new fingerprint."""
-    if args.encrypt and not args.password:
-        print("Error: --password is required when using --encrypt", file=sys.stderr)
-        sys.exit(1)
+    password = None
+    if args.encrypt:
+        password = _resolve_password(args)
 
     print("Creating fingerprint...")
 
     fingerprint = create_fingerprint(hash_sensitive=not args.no_hash)
 
     if save_fingerprint(
-        fingerprint, args.output, encrypt=args.encrypt, password=args.password
+        fingerprint, args.output, encrypt=args.encrypt, password=password
     ):
         print(f"Fingerprint saved to: {args.output}")
         print(f"Hash: {hash_fingerprint(fingerprint)}")
@@ -36,9 +62,13 @@ def cmd_create(args):
 
 def cmd_compare(args):
     """Compare fingerprints."""
+    password = None
+    if args.encrypted:
+        password = _resolve_password(args)
+
     print("Loading baseline fingerprint...")
     baseline = load_fingerprint(
-        args.baseline, encrypted=args.encrypted, password=args.password
+        args.baseline, encrypted=args.encrypted, password=password
     )
 
     if not baseline:
@@ -82,9 +112,13 @@ def cmd_compare(args):
 
 def cmd_hash(args):
     """Calculate hash of existing fingerprint."""
+    password = None
+    if args.encrypted:
+        password = _resolve_password(args)
+
     print("Loading fingerprint...")
     fingerprint = load_fingerprint(
-        args.file, encrypted=args.encrypted, password=args.password
+        args.file, encrypted=args.encrypted, password=password
     )
 
     if not fingerprint:
@@ -92,6 +126,15 @@ def cmd_hash(args):
         sys.exit(1)
 
     print(f"Hash: {hash_fingerprint(fingerprint)}")
+
+
+def _add_password_args(parser):
+    """Add --password and --password-file arguments to a parser."""
+    parser.add_argument("--password", help="Password (prefer --password-file)")
+    parser.add_argument(
+        "--password-file",
+        help="Read password from file (avoids exposing password in process table)",
+    )
 
 
 def main():
@@ -107,8 +150,11 @@ Examples:
   # Compare current system to baseline
   macos-fingerprint compare -b baseline.json
 
-  # Create encrypted fingerprint
-  macos-fingerprint create -o secure.json --encrypt --password mypass
+  # Create encrypted fingerprint (prompts for password)
+  macos-fingerprint create -o secure.json --encrypt
+
+  # Create encrypted fingerprint with password file
+  macos-fingerprint create -o secure.json --encrypt --password-file ~/.fp-pass
 
   # Export comparison as HTML
   macos-fingerprint compare -b baseline.json -o report.html --format html
@@ -131,7 +177,7 @@ Examples:
     create_parser.add_argument(
         "--encrypt", action="store_true", help="Encrypt the fingerprint"
     )
-    create_parser.add_argument("--password", help="Password for encryption")
+    _add_password_args(create_parser)
     create_parser.set_defaults(func=cmd_create)
 
     # Compare command
@@ -154,7 +200,7 @@ Examples:
     compare_parser.add_argument(
         "--encrypted", action="store_true", help="Baseline is encrypted"
     )
-    compare_parser.add_argument("--password", help="Password for decryption")
+    _add_password_args(compare_parser)
     compare_parser.set_defaults(func=cmd_compare)
 
     # Hash command
@@ -163,7 +209,7 @@ Examples:
     hash_parser.add_argument(
         "--encrypted", action="store_true", help="File is encrypted"
     )
-    hash_parser.add_argument("--password", help="Password for decryption")
+    _add_password_args(hash_parser)
     hash_parser.set_defaults(func=cmd_hash)
 
     # Parse arguments

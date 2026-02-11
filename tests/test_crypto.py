@@ -35,6 +35,12 @@ class TestHashSensitiveValue:
         hashed = hash_sensitive_value("")
         assert hashed == ""
 
+    def test_hash_different_values(self):
+        """Test that different values produce different hashes."""
+        h1 = hash_sensitive_value("192.168.1.1")
+        h2 = hash_sensitive_value("192.168.1.2")
+        assert h1 != h2
+
 
 class TestHashFingerprintData:
     """Test fingerprint data hashing."""
@@ -99,6 +105,52 @@ class TestHashFingerprintData:
         data = {"timestamp": "2024-01-01"}
         assert hash_fingerprint_data(data) == data
 
+    def test_hash_preserves_non_sensitive_collectors(self):
+        """Test that collectors not in the sensitive list are untouched."""
+        data = {
+            "collectors": {
+                "InstalledAppsCollector": {"system": ["App1"]},
+            }
+        }
+        hashed = hash_fingerprint_data(data)
+        assert hashed["collectors"]["InstalledAppsCollector"] == {"system": ["App1"]}
+
+    def test_hash_does_not_modify_original(self):
+        """Test that original data is not modified in-place."""
+        data = {
+            "collectors": {
+                "NetworkConfigCollector": {
+                    "ip_addresses": {"en0": "10.0.0.1"},
+                }
+            }
+        }
+        hash_fingerprint_data(data)
+        assert data["collectors"]["NetworkConfigCollector"]["ip_addresses"]["en0"] == "10.0.0.1"
+
+    def test_hash_wifi_networks(self):
+        """Test that wifi_networks in NetworkConfigCollector are hashed."""
+        data = {
+            "collectors": {
+                "NetworkConfigCollector": {
+                    "wifi_networks": ["MyHomeWiFi"],
+                }
+            }
+        }
+        hashed = hash_fingerprint_data(data)
+        assert hashed["collectors"]["NetworkConfigCollector"]["wifi_networks"][0] != "MyHomeWiFi"
+
+    def test_hash_routing_table(self):
+        """Test that routing_table in NetworkConfigCollector is hashed."""
+        data = {
+            "collectors": {
+                "NetworkConfigCollector": {
+                    "routing_table": ["default 192.168.1.1 UGScg en0"],
+                }
+            }
+        }
+        hashed = hash_fingerprint_data(data)
+        assert hashed["collectors"]["NetworkConfigCollector"]["routing_table"][0] != "default 192.168.1.1 UGScg en0"
+
 
 class TestFingerprintEncryption:
     """Test fingerprint encryption."""
@@ -135,8 +187,23 @@ class TestFingerprintEncryption:
         with pytest.raises(ValueError, match="password is required"):
             FingerprintEncryption()
 
-    def test_integrity_hash(self):
-        """Test integrity hash computation."""
+    def test_encrypt_empty_password_raises(self):
+        """Test that empty string password raises ValueError."""
+        with pytest.raises(ValueError, match="password is required"):
+            FingerprintEncryption("")
+
+    def test_encrypted_data_has_version(self):
+        """Test that encrypted output includes version field."""
+        enc = FingerprintEncryption("pw")
+        result = enc.encrypt({"k": "v"})
+        assert result["version"] == "1.0"
+
+
+class TestIntegrityHash:
+    """Test HMAC integrity hash."""
+
+    def test_integrity_hash_deterministic(self):
+        """Test integrity hash computation is deterministic."""
         data = {"test": "data", "value": 123}
 
         hash1 = compute_integrity_hash(data)
@@ -145,7 +212,32 @@ class TestFingerprintEncryption:
         assert hash1 == hash2
         assert len(hash1) == 64
 
-        # Different data produces different hash
+    def test_integrity_hash_different_data(self):
+        """Different data produces different hash."""
+        data1 = {"test": "data"}
         data2 = {"test": "different"}
-        hash3 = compute_integrity_hash(data2)
-        assert hash1 != hash3
+        assert compute_integrity_hash(data1) != compute_integrity_hash(data2)
+
+    def test_integrity_hash_with_password(self):
+        """Password-derived HMAC key differs from default key."""
+        data = {"key": "value"}
+        hash_no_pw = compute_integrity_hash(data)
+        hash_with_pw = compute_integrity_hash(data, password="my_secret")
+
+        # Different keys produce different hashes
+        assert hash_no_pw != hash_with_pw
+        assert len(hash_with_pw) == 64
+
+    def test_integrity_hash_password_deterministic(self):
+        """Same password produces same hash."""
+        data = {"key": "value"}
+        h1 = compute_integrity_hash(data, password="pw123")
+        h2 = compute_integrity_hash(data, password="pw123")
+        assert h1 == h2
+
+    def test_integrity_hash_different_passwords(self):
+        """Different passwords produce different hashes."""
+        data = {"key": "value"}
+        h1 = compute_integrity_hash(data, password="alpha")
+        h2 = compute_integrity_hash(data, password="beta")
+        assert h1 != h2

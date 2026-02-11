@@ -4,9 +4,13 @@ Fingerprint comparison with diff-style output and severity classification.
 
 import html
 import json
+import logging
+from collections import Counter
 from typing import Dict, Any, List
 from enum import Enum
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from ..utils.commands import safe_write_file
 
@@ -68,6 +72,9 @@ def compare_lists(baseline: List, current: List) -> Dict[str, List]:
     """
     Compare two lists and return added/removed items.
 
+    Uses Counter-based comparison to correctly account for duplicate
+    entries and quantity changes.
+
     Args:
         baseline: Baseline list
         current: Current list
@@ -75,13 +82,21 @@ def compare_lists(baseline: List, current: List) -> Dict[str, List]:
     Returns:
         Dictionary with 'added' and 'removed' keys
     """
-    baseline_set = set(baseline) if baseline else set()
-    current_set = set(current) if current else set()
+    baseline_counts = Counter(baseline) if baseline else Counter()
+    current_counts = Counter(current) if current else Counter()
 
-    added = list(current_set - baseline_set)
-    removed = list(baseline_set - current_set)
+    added: List = []
+    removed: List = []
 
-    return {"added": sorted(added), "removed": sorted(removed)}
+    all_items = set(baseline_counts.keys()) | set(current_counts.keys())
+    for item in sorted(all_items, key=str):
+        diff = current_counts.get(item, 0) - baseline_counts.get(item, 0)
+        if diff > 0:
+            added.extend([item] * diff)
+        elif diff < 0:
+            removed.extend([item] * abs(diff))
+
+    return {"added": sorted(added, key=str), "removed": sorted(removed, key=str)}
 
 
 def compare_dicts(baseline: Dict, current: Dict) -> Dict[str, Any]:
@@ -344,7 +359,7 @@ def export_comparison_html(differences: Dict[str, Any], filename: str) -> bool:
 
         return safe_write_file(filename, markup, permissions=0o600)
     except Exception as e:
-        print(f"Error exporting HTML: {e}")
+        logger.error("Error exporting HTML: %s", e)
         return False
 
 
@@ -363,5 +378,5 @@ def export_comparison_json(differences: Dict[str, Any], filename: str) -> bool:
         content = json.dumps(differences, indent=2)
         return safe_write_file(filename, content, permissions=0o600)
     except Exception as e:
-        print(f"Error exporting JSON: {e}")
+        logger.error("Error exporting JSON: %s", e)
         return False

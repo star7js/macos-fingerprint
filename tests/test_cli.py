@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from macos_fingerprint.cli import cmd_create, cmd_hash
+from macos_fingerprint.cli import cmd_create, cmd_hash, _resolve_password
 
 
 @pytest.fixture
@@ -31,6 +31,59 @@ def sample_fingerprint():
     }
 
 
+class TestResolvePassword:
+    """Test password resolution logic."""
+
+    def test_resolve_from_password_flag(self):
+        """--password flag is used directly."""
+        args = MagicMock()
+        args.password = "direct"
+        args.password_file = None
+        assert _resolve_password(args) == "direct"
+
+    def test_resolve_from_password_file(self, tmp_path):
+        """--password-file reads from file."""
+        pw_file = tmp_path / "pw.txt"
+        pw_file.write_text("from_file\n")
+
+        args = MagicMock()
+        args.password = None
+        args.password_file = str(pw_file)
+        assert _resolve_password(args) == "from_file"
+
+    def test_resolve_password_file_missing(self, tmp_path):
+        """Missing password file exits with error."""
+        args = MagicMock()
+        args.password = None
+        args.password_file = str(tmp_path / "nonexistent.txt")
+
+        with pytest.raises(SystemExit):
+            _resolve_password(args)
+
+    @patch("sys.stdin")
+    def test_resolve_non_interactive_no_password(self, mock_stdin):
+        """Non-interactive mode without password exits with error."""
+        mock_stdin.isatty.return_value = False
+        args = MagicMock()
+        args.password = None
+        args.password_file = None
+
+        with pytest.raises(SystemExit):
+            _resolve_password(args)
+
+    @patch("macos_fingerprint.cli.getpass.getpass", return_value="prompted")
+    @patch("sys.stdin")
+    def test_resolve_interactive_prompt(self, mock_stdin, mock_getpass):
+        """Interactive mode prompts for password."""
+        mock_stdin.isatty.return_value = True
+        args = MagicMock()
+        args.password = None
+        args.password_file = None
+
+        assert _resolve_password(args) == "prompted"
+        mock_getpass.assert_called_once()
+
+
 class TestCmdCreate:
     """Test cmd_create function."""
 
@@ -50,6 +103,7 @@ class TestCmdCreate:
         args.no_hash = False
         args.encrypt = False
         args.password = None
+        args.password_file = None
 
         cmd_create(args)
 
@@ -74,6 +128,7 @@ class TestCmdCreate:
         args.no_hash = True
         args.encrypt = False
         args.password = None
+        args.password_file = None
 
         cmd_create(args)
 
@@ -94,6 +149,7 @@ class TestCmdCreate:
         args.no_hash = False
         args.encrypt = True
         args.password = "test123"
+        args.password_file = None
 
         cmd_create(args)
 
@@ -116,6 +172,7 @@ class TestCmdCreate:
         args.no_hash = False
         args.encrypt = False
         args.password = None
+        args.password_file = None
 
         with pytest.raises(SystemExit) as exc_info:
             cmd_create(args)
@@ -137,6 +194,7 @@ class TestCmdHash:
         args.file = temp_file
         args.encrypted = False
         args.password = None
+        args.password_file = None
 
         cmd_hash(args)
 
@@ -152,11 +210,29 @@ class TestCmdHash:
         args.file = temp_file
         args.encrypted = False
         args.password = None
+        args.password_file = None
 
         with pytest.raises(SystemExit) as exc_info:
             cmd_hash(args)
 
         assert exc_info.value.code == 1
+
+    @patch("macos_fingerprint.cli.load_fingerprint")
+    @patch("macos_fingerprint.cli.hash_fingerprint")
+    def test_hash_encrypted(self, mock_hash, mock_load, sample_fingerprint, temp_file):
+        """Test hashing an encrypted fingerprint."""
+        mock_load.return_value = sample_fingerprint
+        mock_hash.return_value = "abc123"
+
+        args = MagicMock()
+        args.file = temp_file
+        args.encrypted = True
+        args.password = "secret"
+        args.password_file = None
+
+        cmd_hash(args)
+
+        mock_load.assert_called_once_with(temp_file, encrypted=True, password="secret")
 
 
 class TestCLIIntegration:
@@ -173,6 +249,7 @@ class TestCLIIntegration:
         args_create.no_hash = False
         args_create.encrypt = False
         args_create.password = None
+        args_create.password_file = None
 
         # This will actually save the file since we're not mocking save_fingerprint
         cmd_create(args_create)
