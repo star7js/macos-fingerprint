@@ -1,85 +1,34 @@
 """
-PyQt5 GUI for MacBook Fingerprint tool.
+Main application window for the MacBook Fingerprint GUI.
 """
 
 import sys
 import json
 from datetime import datetime, timedelta
+
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
     QTabWidget,
     QWidget,
     QVBoxLayout,
-    QPushButton,
-    QTextEdit,
     QLabel,
     QHBoxLayout,
     QStyle,
-    QProgressBar,
     QMessageBox,
     QFileDialog,
-    QCheckBox,
-    QComboBox,
     QColorDialog,
 )
-from PyQt5.QtCore import QTimer, Qt, QSettings, QThread, pyqtSignal
+from PyQt5.QtCore import QTimer, Qt, QSettings
 from PyQt5.QtGui import QFont, QPalette, QColor
 
-from .core.fingerprint import create_fingerprint
-from .core.storage import save_fingerprint, load_fingerprint
-from .core.comparison import (
-    compare_fingerprints,
+from ..core.storage import save_fingerprint, load_fingerprint
+from ..core.comparison import (
     export_comparison_html,
     export_comparison_json,
 )
-
-
-class FingerprintWorker(QThread):
-    """Worker thread for fingerprint creation to prevent UI freezing."""
-
-    finished = pyqtSignal(dict)
-    error = pyqtSignal(str)
-    progress = pyqtSignal(str)
-
-    def __init__(self, hash_sensitive=True):
-        super().__init__()
-        self.hash_sensitive = hash_sensitive
-
-    def run(self):
-        """Execute fingerprint creation in background."""
-        try:
-            self.progress.emit("Collecting system information...")
-            fingerprint = create_fingerprint(hash_sensitive=self.hash_sensitive)
-            self.progress.emit("Fingerprint created successfully")
-            self.finished.emit(fingerprint)
-        except Exception as e:
-            self.error.emit(str(e))
-
-
-class ComparisonWorker(QThread):
-    """Worker thread for fingerprint comparison."""
-
-    finished = pyqtSignal(dict)
-    error = pyqtSignal(str)
-    progress = pyqtSignal(str)
-
-    def __init__(self, baseline, hash_sensitive=True):
-        super().__init__()
-        self.baseline = baseline
-        self.hash_sensitive = hash_sensitive
-
-    def run(self):
-        """Execute comparison in background."""
-        try:
-            self.progress.emit("Creating current fingerprint...")
-            current = create_fingerprint(hash_sensitive=self.hash_sensitive)
-            self.progress.emit("Comparing fingerprints...")
-            differences = compare_fingerprints(self.baseline, current)
-            self.progress.emit("Comparison complete")
-            self.finished.emit(differences)
-        except Exception as e:
-            self.error.emit(str(e))
+from .workers import FingerprintWorker, ComparisonWorker
+from .tabs import ScanTab, CompareTab, ScheduleTab, SettingsTab
 
 
 class FingerPrintApp(QMainWindow):
@@ -146,181 +95,32 @@ class FingerPrintApp(QMainWindow):
         self.tabs.setFont(QFont("Arial", 12))
         self.layout.addWidget(self.tabs)
 
-        self.setup_scan_tab()
-        self.setup_compare_tab()
-        self.setup_schedule_tab()
-        self.setup_settings_tab()
-
-    def setup_scan_tab(self):
-        """Set up scan tab."""
-        scan_tab = QWidget()
-        scan_layout = QVBoxLayout(scan_tab)
-
-        self.scan_button = self.create_button(
-            "Create New Fingerprint", QStyle.SP_BrowserReload, self.create_fingerprint
-        )
-        scan_layout.addWidget(self.scan_button)
-        self._action_buttons.append(self.scan_button)
-
-        self.scan_progress = QProgressBar()
-        self.scan_progress.setVisible(False)
-        scan_layout.addWidget(self.scan_progress)
-
-        self.scan_status = QLabel("")
-        self.scan_status.setFont(QFont("Arial", 10))
-        scan_layout.addWidget(self.scan_status)
-
-        self.scan_result = self.create_text_edit()
-        scan_layout.addWidget(self.scan_result)
-
-        self.export_fp_button = self.create_button(
-            "Export Fingerprint", QStyle.SP_DialogSaveButton, self.export_fingerprint
-        )
-        scan_layout.addWidget(self.export_fp_button)
-        self._action_buttons.append(self.export_fp_button)
+        self.scan_tab = ScanTab(self)
+        self.compare_tab = CompareTab(self)
+        self.schedule_tab = ScheduleTab(self)
+        self.settings_tab = SettingsTab(self)
 
         self.tabs.addTab(
-            scan_tab, self.style().standardIcon(QStyle.SP_FileIcon), "Scan"
+            self.scan_tab,
+            self.style().standardIcon(QStyle.SP_FileIcon), "Scan",
         )
-
-    def setup_compare_tab(self):
-        """Set up compare tab."""
-        compare_tab = QWidget()
-        compare_layout = QVBoxLayout(compare_tab)
-
-        # Baseline selection row
-        baseline_row = QHBoxLayout()
-        self.baseline_label = QLabel("Baseline: (default)")
-        self.baseline_label.setFont(QFont("Arial", 10))
-        baseline_row.addWidget(self.baseline_label, 1)
-
-        self.load_baseline_button = QPushButton("Load Baseline...")
-        self.load_baseline_button.setIcon(
-            self.style().standardIcon(QStyle.SP_DialogOpenButton)
-        )
-        self.load_baseline_button.clicked.connect(self.load_baseline_file)
-        baseline_row.addWidget(self.load_baseline_button)
-        self._action_buttons.append(self.load_baseline_button)
-
-        compare_layout.addLayout(baseline_row)
-
-        self.compare_button = self.create_button(
-            "Compare with Baseline",
-            QStyle.SP_FileDialogContentsView,
-            self.compare_fingerprints,
-        )
-        compare_layout.addWidget(self.compare_button)
-        self._action_buttons.append(self.compare_button)
-
-        self.compare_progress = QProgressBar()
-        self.compare_progress.setVisible(False)
-        compare_layout.addWidget(self.compare_progress)
-
-        self.compare_status = QLabel("")
-        self.compare_status.setFont(QFont("Arial", 10))
-        compare_layout.addWidget(self.compare_status)
-
-        self.compare_result = self.create_text_edit()
-        compare_layout.addWidget(self.compare_result)
-
-        self.export_cmp_button = self.create_button(
-            "Export Comparison", QStyle.SP_DialogSaveButton, self.export_comparison
-        )
-        compare_layout.addWidget(self.export_cmp_button)
-        self._action_buttons.append(self.export_cmp_button)
-
         self.tabs.addTab(
-            compare_tab,
-            self.style().standardIcon(QStyle.SP_FileDialogDetailedView),
-            "Compare",
+            self.compare_tab,
+            self.style().standardIcon(QStyle.SP_FileDialogDetailedView), "Compare",
         )
-
-    def setup_schedule_tab(self):
-        """Set up schedule tab."""
-        schedule_tab = QWidget()
-        schedule_layout = QVBoxLayout(schedule_tab)
-
-        self.schedule_label = QLabel("Next scheduled scan: Not set")
-        self.schedule_label.setFont(QFont("Arial", 12))
-        schedule_layout.addWidget(self.schedule_label)
-
-        schedule_button = self.create_button(
-            "Schedule Daily Scan", QStyle.SP_BrowserReload, self.schedule_scan
-        )
-        schedule_layout.addWidget(schedule_button)
-        self._action_buttons.append(schedule_button)
-
-        cancel_schedule_button = self.create_button(
-            "Cancel Scheduled Scan", QStyle.SP_BrowserStop, self.cancel_scheduled_scan
-        )
-        schedule_layout.addWidget(cancel_schedule_button)
-
-        schedule_layout.addStretch()
-
         self.tabs.addTab(
-            schedule_tab,
-            self.style().standardIcon(QStyle.SP_FileDialogInfoView),
-            "Schedule",
+            self.schedule_tab,
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView), "Schedule",
         )
-
-    def setup_settings_tab(self):
-        """Set up settings tab."""
-        settings_tab = QWidget()
-        settings_layout = QVBoxLayout(settings_tab)
-
-        self.auto_export_checkbox = QCheckBox("Auto-export results")
-        settings_layout.addWidget(self.auto_export_checkbox)
-
-        theme_label = QLabel("Theme:")
-        self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Light", "Dark", "Custom"])
-        self.theme_combo.setCurrentText(self.theme.capitalize())
-        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
-        settings_layout.addWidget(theme_label)
-        settings_layout.addWidget(self.theme_combo)
-
-        self.custom_color_buttons = {}
-        for color_name in ["background", "text", "button"]:
-            button = QPushButton(f"Choose {color_name.capitalize()} Color")
-            button.clicked.connect(
-                lambda _, cn=color_name: self.choose_custom_color(cn)
-            )
-            settings_layout.addWidget(button)
-            self.custom_color_buttons[color_name] = button
-
-        save_settings_button = self.create_button(
-            "Save Settings", QStyle.SP_DialogSaveButton, self.save_settings
-        )
-        settings_layout.addWidget(save_settings_button)
-
-        settings_layout.addStretch()
-
         self.tabs.addTab(
-            settings_tab,
-            self.style().standardIcon(QStyle.SP_FileDialogInfoView),
-            "Settings",
+            self.settings_tab,
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView), "Settings",
         )
 
     def setup_status_bar(self):
         """Set up status bar."""
         self.statusBar().showMessage("Ready")
         self.statusBar().setFont(QFont("Arial", 10))
-
-    def create_button(self, text, icon, connection):
-        """Create a styled button."""
-        button = QPushButton(text)
-        button.setIcon(self.style().standardIcon(icon))
-        button.setFont(QFont("Arial", 14))
-        button.setMinimumHeight(50)
-        button.clicked.connect(connection)
-        return button
-
-    def create_text_edit(self):
-        """Create a styled text edit widget."""
-        text_edit = QTextEdit()
-        text_edit.setReadOnly(True)
-        text_edit.setFont(QFont("Courier", 12))
-        return text_edit
 
     # ------------------------------------------------------------------
     # Button enable / disable helpers
@@ -341,11 +141,11 @@ class FingerPrintApp(QMainWindow):
             return
 
         self._set_buttons_enabled(False)
-        self.scan_progress.setVisible(True)
-        self.scan_progress.setRange(0, 0)  # Indeterminate progress
+        self.scan_tab.progress.setVisible(True)
+        self.scan_tab.progress.setRange(0, 0)  # Indeterminate progress
         self.update_status("Creating fingerprint...")
 
-        self.worker = FingerprintWorker(hash_sensitive=True)
+        self.worker = FingerprintWorker(hash_sensitive=True, parallel=True)
         self.worker.finished.connect(self.on_fingerprint_created)
         self.worker.error.connect(self.on_fingerprint_error)
         self.worker.progress.connect(self.on_fingerprint_progress)
@@ -354,13 +154,13 @@ class FingerPrintApp(QMainWindow):
     def on_fingerprint_created(self, fingerprint):
         """Handle successful fingerprint creation."""
         self.current_fingerprint = fingerprint
-        self.scan_result.setText(json.dumps(self.current_fingerprint, indent=2))
-        self.scan_progress.setVisible(False)
-        self.scan_status.setText("")
+        self.scan_tab.result.setText(json.dumps(self.current_fingerprint, indent=2))
+        self.scan_tab.progress.setVisible(False)
+        self.scan_tab.status.setText("")
         self._set_buttons_enabled(True)
         self.update_status("Fingerprint created", 5000)
 
-        if self.auto_export_checkbox.isChecked():
+        if self.settings_tab.auto_export_checkbox.isChecked():
             self.export_fingerprint()
 
         # If this was a scheduled scan, chain the comparison now that
@@ -371,14 +171,14 @@ class FingerPrintApp(QMainWindow):
 
     def on_fingerprint_error(self, error):
         """Handle fingerprint creation error."""
-        self.scan_progress.setVisible(False)
-        self.scan_status.setText("")
+        self.scan_tab.progress.setVisible(False)
+        self.scan_tab.status.setText("")
         self._set_buttons_enabled(True)
         self.show_error("Failed to create fingerprint", error)
 
     def on_fingerprint_progress(self, message):
         """Update progress message."""
-        self.scan_status.setText(message)
+        self.scan_tab.status.setText(message)
 
     # ------------------------------------------------------------------
     # Compare
@@ -400,7 +200,7 @@ class FingerPrintApp(QMainWindow):
             self.baseline_fingerprint = loaded
             # Show just the filename, not the full path.
             short = filename.rsplit("/", 1)[-1]
-            self.baseline_label.setText(f"Baseline: {short}")
+            self.compare_tab.baseline_label.setText(f"Baseline: {short}")
             self.update_status(f"Baseline loaded from {short}", 5000)
         else:
             self.show_warning(
@@ -425,12 +225,12 @@ class FingerPrintApp(QMainWindow):
                 )
 
             self._set_buttons_enabled(False)
-            self.compare_progress.setVisible(True)
-            self.compare_progress.setRange(0, 0)
+            self.compare_tab.progress.setVisible(True)
+            self.compare_tab.progress.setRange(0, 0)
             self.update_status("Comparing fingerprints...")
 
             self.worker = ComparisonWorker(
-                self.baseline_fingerprint, hash_sensitive=True
+                self.baseline_fingerprint, hash_sensitive=True, parallel=True
             )
             self.worker.finished.connect(self.on_comparison_complete)
             self.worker.error.connect(self.on_comparison_error)
@@ -443,13 +243,13 @@ class FingerPrintApp(QMainWindow):
     def on_comparison_complete(self, differences):
         """Handle successful comparison."""
         self.last_comparison = differences
-        self.compare_progress.setVisible(False)
-        self.compare_status.setText("")
+        self.compare_tab.progress.setVisible(False)
+        self.compare_tab.status.setText("")
         self._set_buttons_enabled(True)
 
         summary = differences["summary"]
         if summary["total_changes"] == 0:
-            self.compare_result.setText("No differences found.")
+            self.compare_tab.result.setText("No differences found.")
             self.update_status("Comparison complete - no differences", 5000)
         else:
             result_text = "Comparison Summary:\n"
@@ -460,22 +260,22 @@ class FingerPrintApp(QMainWindow):
             result_text += f"Low: {summary['low']}\n\n"
             result_text += json.dumps(differences, indent=2)
 
-            self.compare_result.setText(result_text)
+            self.compare_tab.result.setText(result_text)
             self.update_status("Comparison complete - differences found", 5000)
 
-        if self.auto_export_checkbox.isChecked():
+        if self.settings_tab.auto_export_checkbox.isChecked():
             self.export_comparison()
 
     def on_comparison_error(self, error):
         """Handle comparison error."""
-        self.compare_progress.setVisible(False)
-        self.compare_status.setText("")
+        self.compare_tab.progress.setVisible(False)
+        self.compare_tab.status.setText("")
         self._set_buttons_enabled(True)
         self.show_error("Comparison Failed", error)
 
     def on_comparison_progress(self, message):
         """Update comparison progress message."""
-        self.compare_status.setText(message)
+        self.compare_tab.status.setText(message)
 
     # ------------------------------------------------------------------
     # Schedule
@@ -489,7 +289,7 @@ class FingerPrintApp(QMainWindow):
             self.timer.start(24 * 60 * 60 * 1000)  # 24 hours
             next_scan = datetime.now() + timedelta(days=1)
             next_scan = next_scan.replace(hour=0, minute=0, second=0, microsecond=0)
-            self.schedule_label.setText(
+            self.schedule_tab.schedule_label.setText(
                 f"Next scheduled scan: {next_scan.strftime('%Y-%m-%d %H:%M:%S')}"
             )
             self.update_status("Daily scan scheduled", 5000)
@@ -505,7 +305,7 @@ class FingerPrintApp(QMainWindow):
         """Cancel scheduled scan."""
         if hasattr(self, "timer"):
             self.timer.stop()
-            self.schedule_label.setText("Next scheduled scan: Not set")
+            self.schedule_tab.schedule_label.setText("Next scheduled scan: Not set")
             self.update_status("Scheduled scan cancelled", 5000)
         else:
             self.show_info("No scheduled scan to cancel")
@@ -566,7 +366,7 @@ class FingerPrintApp(QMainWindow):
     def _update_custom_color_visibility(self):
         """Show custom color buttons only when the Custom theme is selected."""
         visible = self.theme == "custom"
-        for button in self.custom_color_buttons.values():
+        for button in self.settings_tab.custom_color_buttons.values():
             button.setVisible(visible)
 
     def choose_custom_color(self, color_name):
@@ -574,7 +374,7 @@ class FingerPrintApp(QMainWindow):
         color = QColorDialog.getColor()
         if color.isValid():
             self.custom_colors[color_name] = color.name()
-            self.custom_color_buttons[color_name].setStyleSheet(
+            self.settings_tab.custom_color_buttons[color_name].setStyleSheet(
                 f"background-color: {color.name()};"
             )
         self.apply_theme()
@@ -641,7 +441,9 @@ class FingerPrintApp(QMainWindow):
 
     def save_settings(self):
         """Save application settings."""
-        self.settings.setValue("auto_export", self.auto_export_checkbox.isChecked())
+        self.settings.setValue(
+            "auto_export", self.settings_tab.auto_export_checkbox.isChecked()
+        )
         self.settings.setValue("theme", self.theme)
         for color_name, color_value in self.custom_colors.items():
             self.settings.setValue(f"custom_{color_name}", color_value)
@@ -649,16 +451,16 @@ class FingerPrintApp(QMainWindow):
 
     def load_settings(self):
         """Load application settings."""
-        self.auto_export_checkbox.setChecked(
+        self.settings_tab.auto_export_checkbox.setChecked(
             self.settings.value("auto_export", False, type=bool)
         )
         self.theme = self.settings.value("theme", "light")
-        self.theme_combo.setCurrentText(self.theme.capitalize())
+        self.settings_tab.theme_combo.setCurrentText(self.theme.capitalize())
         for color_name in self.custom_colors:
             self.custom_colors[color_name] = self.settings.value(
                 f"custom_{color_name}", self.custom_colors[color_name]
             )
-            self.custom_color_buttons[color_name].setStyleSheet(
+            self.settings_tab.custom_color_buttons[color_name].setStyleSheet(
                 f"background-color: {self.custom_colors[color_name]};"
             )
         self._update_custom_color_visibility()

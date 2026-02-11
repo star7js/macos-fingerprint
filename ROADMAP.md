@@ -149,27 +149,28 @@ Python runtime — a much larger undertaking.
 
 ## Roadmap
 
-### Phase 1: Foundation Fixes (the bugs and gaps above)
+### Phase 1: Foundation Fixes (the bugs and gaps above) -- DONE
 
-- [ ] Replace `dns-sd -B` with a bounded alternative or remove BonjourServicesCollector
-- [ ] Use `safe_read_file()` instead of shelling out to `cat` in SSH/Hosts collectors
-- [ ] Make `CollectorRegistry` instance-based instead of class-level mutable state
-- [ ] Replace all `print()` calls with Python `logging` module
-- [ ] Fix `compare_lists` to preserve ordering/duplicates (use `Counter` or sequence diff)
-- [ ] Add `--password-file` and stdin password prompt for secure password input
-- [ ] Derive HMAC key from user password when encryption is enabled
-- [ ] Raise test coverage floor to 60%
+- [x] Replace `dns-sd -B` with a bounded alternative or remove BonjourServicesCollector
+- [x] Use `safe_read_file()` instead of shelling out to `cat` in SSH/Hosts collectors
+- [x] Make `CollectorRegistry` instance-based instead of class-level mutable state
+- [x] Replace all `print()` calls with Python `logging` module
+- [x] Fix `compare_lists` to preserve ordering/duplicates (use `Counter` or sequence diff)
+- [x] Add `--password-file` and stdin password prompt for secure password input
+- [x] Derive HMAC key from user password when encryption is enabled
+- [x] Raise test coverage floor to 60%
 
-### Phase 2: Usability
+### Phase 2: Usability -- DONE
 
-- [ ] Add a config file (`~/.macos-fingerprint/config.toml`) for persistent settings
-- [ ] Add `--collectors` flag to select which collectors run
-- [ ] Add `--exclude` flag to skip specific collectors
-- [ ] Add `--json` output mode to CLI for machine-readable output
-- [ ] Add ignore rules (path patterns, collector names, known-change hashes)
-- [ ] Run collectors in parallel with `concurrent.futures.ThreadPoolExecutor`
-- [ ] Add per-collector progress callbacks so the GUI shows which collector is running
-- [ ] Split `gui.py` into separate modules (tabs, controller, workers)
+- [x] Add a config file (`~/.macos-fingerprint/config.toml`) for persistent settings
+- [x] Add `--collectors` flag to select which collectors run
+- [x] Add `--exclude` flag to skip specific collectors
+- [x] Add `--json` output mode to CLI for machine-readable output
+- [x] Add ignore rules (collector names to skip in comparisons)
+- [x] Run collectors in parallel with `concurrent.futures.ThreadPoolExecutor`
+- [x] Add per-collector progress callbacks so the GUI shows which collector is running
+- [x] Split `gui.py` into separate modules (`gui/app.py`, `gui/tabs.py`, `gui/workers.py`)
+- [x] Raise test coverage floor to 75% (184 tests, 81% coverage)
 
 ### Phase 3: Monitoring & Alerting
 

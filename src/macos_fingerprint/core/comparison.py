@@ -6,7 +6,7 @@ import html
 import json
 import logging
 from collections import Counter
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from enum import Enum
 from datetime import datetime
 
@@ -144,7 +144,9 @@ def compare_dicts(baseline: Dict, current: Dict) -> Dict[str, Any]:
 
 
 def compare_fingerprints(
-    baseline: Dict[str, Any], current: Dict[str, Any]
+    baseline: Dict[str, Any],
+    current: Dict[str, Any],
+    ignore_collectors: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Compare two fingerprints and return detailed differences.
@@ -152,10 +154,14 @@ def compare_fingerprints(
     Args:
         baseline: Baseline fingerprint
         current: Current fingerprint
+        ignore_collectors: Optional list of collector names whose changes
+                           should be silently skipped.
 
     Returns:
         Dictionary containing comparison results with severity classification
     """
+    ignore_set = set(ignore_collectors) if ignore_collectors else set()
+
     differences = {
         "timestamp": datetime.now().isoformat(),
         "baseline_timestamp": baseline.get("timestamp", "unknown"),
@@ -176,6 +182,8 @@ def compare_fingerprints(
     all_collectors = set(baseline_collectors.keys()) | set(current_collectors.keys())
 
     for collector in all_collectors:
+        if collector in ignore_set:
+            continue
         if collector not in baseline_collectors:
             severity = ChangeSeverity.LOW
             differences["changes"][collector] = {
