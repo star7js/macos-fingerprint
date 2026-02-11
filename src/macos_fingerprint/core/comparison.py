@@ -112,7 +112,7 @@ def compare_dicts(baseline: Dict, current: Dict) -> Dict[str, Any]:
     """
     changes = {}
 
-    all_keys = set(baseline.keys()) | set(current.keys())
+    all_keys = sorted(set(baseline.keys()) | set(current.keys()), key=str)
 
     for key in all_keys:
         if key not in baseline:

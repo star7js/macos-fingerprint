@@ -3,7 +3,7 @@ System information collectors for hardware, OS, and kernel extensions.
 """
 
 from .base import BaseCollector, CollectorResult, CollectorCategory
-from ..utils.commands import run_command
+from ..utils.commands import run_command, split_lines
 
 
 class SystemInfoCollector(BaseCollector):
@@ -24,7 +24,7 @@ class SystemInfoCollector(BaseCollector):
         memory_size = run_command(["sysctl", "-n", "hw.memsize"])
 
         data = {
-            "sw_vers": sw_vers.split("\n") if sw_vers else [],
+            "sw_vers": split_lines(sw_vers),
             "hostname": hostname if hostname else "",
             "uptime": uptime if uptime else "",
             "hardware_model": hardware_model if hardware_model else "",
@@ -44,7 +44,7 @@ class KernelExtensionsCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["kextstat", "-l"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -58,7 +58,7 @@ class PrintersCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["lpstat", "-p"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -72,7 +72,7 @@ class BluetoothDevicesCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["system_profiler", "SPBluetoothDataType"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -86,6 +86,6 @@ class TimeMachineCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["tmutil", "destinationinfo"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)

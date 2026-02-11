@@ -122,7 +122,7 @@ class TestLoadFingerprint:
         assert loaded is None
 
     def test_load_with_corrupted_hash(self, sample_fingerprint, temp_file):
-        """Test loading fingerprint with corrupted integrity hash."""
+        """Test loading fingerprint with corrupted integrity hash returns None."""
         save_fingerprint(sample_fingerprint, temp_file)
 
         # Corrupt the hash
@@ -132,9 +132,9 @@ class TestLoadFingerprint:
         with open(temp_file, "w") as f:
             json.dump(data, f)
 
-        # Should still load but print warning (captured in output)
+        # Tampered data must be rejected
         loaded = load_fingerprint(temp_file)
-        assert loaded is not None
+        assert loaded is None
 
 
 class TestExportFingerprint:

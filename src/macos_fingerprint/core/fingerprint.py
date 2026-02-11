@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Set
+from typing import Callable, Dict, Any, List, Optional, Set
 
 from ..collectors.base import CollectorRegistry, default_registry
 from ..collectors import apps, system, network, security, user, developer
@@ -95,7 +95,7 @@ def create_fingerprint(
     registry: Optional[CollectorRegistry] = None,
     collectors: Optional[List[str]] = None,
     exclude: Optional[List[str]] = None,
-    progress_callback: Optional[object] = None,
+    progress_callback: Optional[Callable] = None,
     parallel: bool = False,
     max_workers: int = 4,
 ) -> Dict[str, Any]:
@@ -166,7 +166,7 @@ def create_fingerprint(
 
 def hash_fingerprint(fingerprint: Dict[str, Any]) -> str:
     """
-    Generate a SHA-256 hash of the entire fingerprint.
+    Generate a SHA3-256 hash of the entire fingerprint.
 
     Args:
         fingerprint: Fingerprint dictionary
@@ -175,4 +175,4 @@ def hash_fingerprint(fingerprint: Dict[str, Any]) -> str:
         Hex-encoded hash string
     """
     serialized = json.dumps(fingerprint, sort_keys=True).encode("utf-8")
-    return hashlib.sha256(serialized).hexdigest()
+    return hashlib.sha3_256(serialized).hexdigest()
