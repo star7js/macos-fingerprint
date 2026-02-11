@@ -3,7 +3,10 @@ Secure storage for fingerprint data.
 """
 
 import json
+import logging
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from ..utils.commands import safe_write_file, safe_read_file, validate_json_safe
 from ..utils.crypto import FingerprintEncryption, compute_integrity_hash
@@ -34,15 +37,17 @@ def save_fingerprint(
             encrypted_data = encryptor.encrypt(fingerprint)
             content = json.dumps(encrypted_data, indent=2)
         else:
-            # Add integrity hash
+            # Add integrity hash (password-derived when available)
             data_with_hash = fingerprint.copy()
-            data_with_hash["_integrity_hash"] = compute_integrity_hash(fingerprint)
+            data_with_hash["_integrity_hash"] = compute_integrity_hash(
+                fingerprint, password=password
+            )
             content = json.dumps(data_with_hash, indent=2)
 
         # Write with secure permissions (0600)
         return safe_write_file(filename, content, permissions=0o600)
     except Exception as e:
-        print(f"Error saving fingerprint: {e}")
+        logger.error("Error saving fingerprint: %s", e)
         return False
 
 
@@ -63,7 +68,7 @@ def load_fingerprint(
     try:
         content = safe_read_file(filename)
         if not content:
-            print(f"Error: {filename} not found or could not be read.")
+            logger.error("File not found or could not be read: %s", filename)
             return None
 
         # Validate JSON before parsing
@@ -78,20 +83,20 @@ def load_fingerprint(
             # Verify integrity hash if present
             if "_integrity_hash" in data:
                 stored_hash = data.pop("_integrity_hash")
-                computed_hash = compute_integrity_hash(data)
+                computed_hash = compute_integrity_hash(data, password=password)
                 if stored_hash != computed_hash:
-                    print("Warning: Integrity check failed - data may be corrupted")
+                    logger.warning("Integrity check failed - data may be corrupted")
             fingerprint = data
 
         return fingerprint
     except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in {filename}: {e}")
+        logger.error("Invalid JSON in %s: %s", filename, e)
         return None
     except ValueError as e:
-        print(f"Error loading fingerprint: {e}")
+        logger.error("Error loading fingerprint: %s", e)
         return None
     except Exception as e:
-        print(f"Error loading fingerprint: {e}")
+        logger.error("Error loading fingerprint: %s", e)
         return None
 
 

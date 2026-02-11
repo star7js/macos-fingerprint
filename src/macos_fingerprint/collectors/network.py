@@ -5,7 +5,7 @@ Network information collectors.
 import os
 import re
 from .base import BaseCollector, CollectorResult, CollectorCategory
-from ..utils.commands import run_command
+from ..utils.commands import run_command, safe_read_file
 
 
 class NetworkConfigCollector(BaseCollector):
@@ -115,8 +115,8 @@ class SSHConfigCollector(BaseCollector):
         self.category = CollectorCategory.NETWORK
 
     def collect(self) -> CollectorResult:
-        ssh_config = run_command(["cat", "/etc/ssh/sshd_config"])
-        known_hosts = run_command(["cat", os.path.expanduser("~/.ssh/known_hosts")])
+        ssh_config = safe_read_file("/etc/ssh/sshd_config")
+        known_hosts = safe_read_file(os.path.expanduser("~/.ssh/known_hosts"))
 
         data = {
             "sshd_config": ssh_config.split("\n") if ssh_config else [],
@@ -134,7 +134,7 @@ class HostsFileCollector(BaseCollector):
         self.category = CollectorCategory.NETWORK
 
     def collect(self) -> CollectorResult:
-        result = run_command(["cat", "/etc/hosts"])
+        result = safe_read_file("/etc/hosts")
         data = result.split("\n") if result else []
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
@@ -154,15 +154,3 @@ class NetworkSharesCollector(BaseCollector):
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
 
-class BonjourServicesCollector(BaseCollector):
-    """Collect Bonjour services."""
-
-    def __init__(self):
-        super().__init__()
-        self.category = CollectorCategory.NETWORK
-
-    def collect(self) -> CollectorResult:
-        result = run_command(["dns-sd", "-B"])
-        data = result.split("\n") if result else []
-
-        return CollectorResult(success=True, data=data, collector_name=self.name)

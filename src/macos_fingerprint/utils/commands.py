@@ -2,9 +2,12 @@
 Safe command execution utilities with input validation.
 """
 
+import logging
 import subprocess
 import os
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 def sanitize_path(path: str) -> str:
@@ -101,7 +104,7 @@ def run_command(command: List[str], timeout: int = 30) -> Optional[str]:
         return None
     except ValueError as e:
         # Command validation failed
-        print(f"Command validation error: {e}")
+        logger.warning("Command validation error: %s", e)
         return None
     except Exception:
         return None
@@ -123,7 +126,7 @@ def safe_read_file(filepath: str, max_size: int = 10 * 1024 * 1024) -> Optional[
 
         # Check file size
         if os.path.getsize(sanitized_path) > max_size:
-            print(f"File too large: {filepath}")
+            logger.warning("File too large: %s", filepath)
             return None
 
         with open(sanitized_path, "r", encoding="utf-8") as f:

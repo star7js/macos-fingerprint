@@ -5,79 +5,96 @@ Core fingerprinting functionality.
 import hashlib
 import json
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
-from ..collectors.base import CollectorRegistry
+from ..collectors.base import CollectorRegistry, default_registry
 from ..collectors import apps, system, network, security, user, developer
 from ..utils.crypto import hash_fingerprint_data
 
 
-def register_all_collectors():
-    """Register all available collectors."""
+def register_all_collectors(registry: Optional[CollectorRegistry] = None):
+    """Register all available collectors.
+
+    Args:
+        registry: Registry instance to populate. Uses the default
+                  module-level registry when *None*.
+    """
+    if registry is None:
+        registry = default_registry
+
     # Apps
-    CollectorRegistry.register(apps.InstalledAppsCollector())
-    CollectorRegistry.register(apps.BrowserExtensionsCollector())
-    CollectorRegistry.register(apps.LaunchAgentsCollector())
-    CollectorRegistry.register(apps.StartupItemsCollector())
+    registry.register(apps.InstalledAppsCollector())
+    registry.register(apps.BrowserExtensionsCollector())
+    registry.register(apps.LaunchAgentsCollector())
+    registry.register(apps.StartupItemsCollector())
 
     # System
-    CollectorRegistry.register(system.SystemInfoCollector())
-    CollectorRegistry.register(system.KernelExtensionsCollector())
-    CollectorRegistry.register(system.PrintersCollector())
-    CollectorRegistry.register(system.BluetoothDevicesCollector())
-    CollectorRegistry.register(system.TimeMachineCollector())
+    registry.register(system.SystemInfoCollector())
+    registry.register(system.KernelExtensionsCollector())
+    registry.register(system.PrintersCollector())
+    registry.register(system.BluetoothDevicesCollector())
+    registry.register(system.TimeMachineCollector())
 
     # Network
-    CollectorRegistry.register(network.NetworkConfigCollector())
-    CollectorRegistry.register(network.OpenPortsCollector())
-    CollectorRegistry.register(network.NetworkConnectionsCollector())
-    CollectorRegistry.register(network.SSHConfigCollector())
-    CollectorRegistry.register(network.HostsFileCollector())
-    CollectorRegistry.register(network.NetworkSharesCollector())
-    CollectorRegistry.register(network.BonjourServicesCollector())
+    registry.register(network.NetworkConfigCollector())
+    registry.register(network.OpenPortsCollector())
+    registry.register(network.NetworkConnectionsCollector())
+    registry.register(network.SSHConfigCollector())
+    registry.register(network.HostsFileCollector())
+    registry.register(network.NetworkSharesCollector())
 
     # Security
-    CollectorRegistry.register(security.SecuritySettingsCollector())
-    CollectorRegistry.register(security.GatekeeperCollector())
-    CollectorRegistry.register(security.XProtectCollector())
-    CollectorRegistry.register(security.MRTCollector())
+    registry.register(security.SecuritySettingsCollector())
+    registry.register(security.GatekeeperCollector())
+    registry.register(security.XProtectCollector())
+    registry.register(security.MRTCollector())
 
     # User
-    CollectorRegistry.register(user.UserAccountsCollector())
+    registry.register(user.UserAccountsCollector())
 
     # Developer
-    CollectorRegistry.register(developer.HomebrewCollector())
-    CollectorRegistry.register(developer.PipPackagesCollector())
-    CollectorRegistry.register(developer.NpmPackagesCollector())
-    CollectorRegistry.register(developer.XcodeCollector())
+    registry.register(developer.HomebrewCollector())
+    registry.register(developer.PipPackagesCollector())
+    registry.register(developer.NpmPackagesCollector())
+    registry.register(developer.XcodeCollector())
 
 
-def create_fingerprint(hash_sensitive: bool = True) -> Dict[str, Any]:
+def create_fingerprint(
+    hash_sensitive: bool = True,
+    registry: Optional[CollectorRegistry] = None,
+) -> Dict[str, Any]:
     """
     Create a system fingerprint by running all collectors.
 
     Args:
         hash_sensitive: Whether to hash sensitive fields (default: True)
+        registry: Optional registry instance. A fresh default registry
+                  is used when *None*.
 
     Returns:
         Dictionary containing fingerprint data
     """
-    # Register collectors if not already registered
-    if not CollectorRegistry.get_all_collectors():
-        register_all_collectors()
+    if registry is None:
+        # Build a fresh registry every time so callers get a clean,
+        # self-contained set of collectors.
+        registry = CollectorRegistry()
+        register_all_collectors(registry)
 
     # Collect all data
-    results = CollectorRegistry.collect_all()
+    results = registry.collect_all()
 
     # Build fingerprint structure
-    fingerprint = {"timestamp": datetime.now().isoformat(), "collectors": {}}
+    fingerprint: Dict[str, Any] = {
+        "timestamp": datetime.now().isoformat(),
+        "collectors": {},
+    }
 
     # Add successful collector results
     for name, result in results.items():
         if result.success:
-            fingerprint["collectors"][name] = result.data  # type: ignore[index]
+            fingerprint["collectors"][name] = result.data
         else:
-            fingerprint["collectors"][name] = {"error": result.error}  # type: ignore[index]
+            fingerprint["collectors"][name] = {"error": result.error}
 
     # Hash sensitive fields if requested
     if hash_sensitive:

@@ -219,21 +219,42 @@ class FingerprintEncryption:
             raise ValueError(f"Decryption failed: {str(e)}")
 
 
-_INTEGRITY_KEY = b"macos-fingerprint-integrity-v1"
+_DEFAULT_INTEGRITY_KEY = b"macos-fingerprint-integrity-v1"
 
 
-def compute_integrity_hash(data: Dict[str, Any]) -> str:
+def _derive_hmac_key(password: str) -> bytes:
+    """Derive a dedicated HMAC key from a user password.
+
+    Uses PBKDF2 with a fixed, distinct salt so the derived key differs
+    from the encryption key (which uses a random salt).
+    """
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=b"macos-fingerprint-hmac-salt-v1",
+        iterations=100_000,
+    )
+    return kdf.derive(password.encode("utf-8"))
+
+
+def compute_integrity_hash(
+    data: Dict[str, Any], password: Optional[str] = None
+) -> str:
     """
     Compute HMAC-SHA256 for integrity verification.
 
-    Uses a fixed application-level key so that the hash cannot be trivially
-    recomputed by modifying the data alone.
+    When *password* is provided the HMAC key is derived from it via PBKDF2,
+    making forgery infeasible without the password.  Without a password a
+    fixed application-level key is used; this guards against **accidental
+    corruption only** — anyone with the source code can recompute the hash.
 
     Args:
         data: Dictionary to hash
+        password: Optional password for key derivation
 
     Returns:
         Hex-encoded HMAC
     """
+    key = _derive_hmac_key(password) if password else _DEFAULT_INTEGRITY_KEY
     serialized = json.dumps(data, sort_keys=True).encode("utf-8")
-    return hmac.new(_INTEGRITY_KEY, serialized, hashlib.sha256).hexdigest()
+    return hmac.new(key, serialized, hashlib.sha256).hexdigest()

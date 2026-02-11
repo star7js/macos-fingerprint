@@ -52,3 +52,9 @@ Homepage = "https://github.com/star7js/macos-fingerprint"
 markers = [
     "slow: tests that are slow or rely on system collectors",
 ]
+
+[tool.coverage.run]
+omit = [
+    "src/macos_fingerprint/gui.py",
+    "src/macos_fingerprint/__main__.py",
+]

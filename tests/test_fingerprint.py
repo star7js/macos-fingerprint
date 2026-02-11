@@ -1,6 +1,7 @@
 """Tests for fingerprint module."""
 
 from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
@@ -12,22 +13,15 @@ from macos_fingerprint.core.fingerprint import (
 from macos_fingerprint.collectors.base import CollectorRegistry
 
 
-@pytest.fixture(autouse=True)
-def clean_registry():
-    """Clean collector registry before each test."""
-    CollectorRegistry._collectors = {}
-    yield
-    CollectorRegistry._collectors = {}
-
-
 @pytest.mark.slow
 class TestRegisterAllCollectors:
     """Test collector registration."""
 
     def test_register_all_collectors(self):
         """Test that all collectors are registered."""
-        register_all_collectors()
-        collectors = CollectorRegistry.get_all_collectors()
+        registry = CollectorRegistry()
+        register_all_collectors(registry)
+        collectors = registry.get_all_collectors()
 
         assert len(collectors) > 0
         # Should have collectors from all categories
@@ -38,6 +32,22 @@ class TestRegisterAllCollectors:
         assert any("network" in name.lower() for name in collector_names)
         assert any("security" in name.lower() for name in collector_names)
         assert any("user" in name.lower() for name in collector_names)
+
+    def test_register_does_not_include_bonjour(self):
+        """BonjourServicesCollector was removed (dns-sd hangs)."""
+        registry = CollectorRegistry()
+        register_all_collectors(registry)
+        names = [c.name for c in registry.get_all_collectors()]
+        assert "BonjourServicesCollector" not in names
+
+    def test_register_is_idempotent(self):
+        """Calling register twice on the same registry re-registers cleanly."""
+        registry = CollectorRegistry()
+        register_all_collectors(registry)
+        count_first = len(registry.get_all_collectors())
+        register_all_collectors(registry)
+        count_second = len(registry.get_all_collectors())
+        assert count_first == count_second
 
 
 @pytest.mark.slow
@@ -91,7 +101,25 @@ class TestCreateFingerprint:
         for collector_name, result in fingerprint["collectors"].items():
             # Result can be a dict (object data or error) or list (array data)
             assert isinstance(result, (dict, list))
-            # Valid types: dict with data, dict with error, list with data, empty list/dict
+
+    def test_create_fingerprint_uses_fresh_registry(self):
+        """Each call without a registry gets a fresh, full set of collectors."""
+        fp1 = create_fingerprint()
+        fp2 = create_fingerprint()
+        # Both should have the same set of collectors
+        assert set(fp1["collectors"].keys()) == set(fp2["collectors"].keys())
+
+    def test_create_fingerprint_with_custom_registry(self):
+        """A custom registry limits which collectors run."""
+        from macos_fingerprint.collectors.apps import InstalledAppsCollector
+
+        registry = CollectorRegistry()
+        registry.register(InstalledAppsCollector())
+
+        with patch("macos_fingerprint.collectors.apps.run_command", return_value=None):
+            fp = create_fingerprint(registry=registry)
+
+        assert list(fp["collectors"].keys()) == ["InstalledAppsCollector"]
 
 
 class TestHashFingerprint:
