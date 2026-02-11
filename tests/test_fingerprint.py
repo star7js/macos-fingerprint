@@ -122,6 +122,46 @@ class TestCreateFingerprint:
         assert list(fp["collectors"].keys()) == ["InstalledAppsCollector"]
 
 
+class TestCreateFingerprintFiltering:
+    """Test collector whitelist and exclude."""
+
+    @patch("macos_fingerprint.collectors.apps.run_command", return_value=None)
+    def test_collectors_whitelist(self, _mock):
+        """Only named collectors should run."""
+        fp = create_fingerprint(
+            collectors=["InstalledAppsCollector"],
+            hash_sensitive=False,
+        )
+        assert "InstalledAppsCollector" in fp["collectors"]
+        assert "SystemInfoCollector" not in fp["collectors"]
+
+    @patch("macos_fingerprint.collectors.apps.run_command", return_value=None)
+    @patch("macos_fingerprint.collectors.system.run_command", return_value=None)
+    def test_exclude_blacklist(self, _m1, _m2):
+        """Excluded collectors should not run."""
+        fp = create_fingerprint(
+            exclude=["InstalledAppsCollector"],
+            hash_sensitive=False,
+        )
+        assert "InstalledAppsCollector" not in fp["collectors"]
+        assert "SystemInfoCollector" in fp["collectors"]
+
+    @patch("macos_fingerprint.collectors.apps.run_command", return_value=None)
+    def test_progress_callback(self, _mock):
+        """Progress callback is called for each collector."""
+        calls = []
+
+        def cb(name, idx, total):
+            calls.append(name)
+
+        create_fingerprint(
+            collectors=["InstalledAppsCollector"],
+            hash_sensitive=False,
+            progress_callback=cb,
+        )
+        assert "InstalledAppsCollector" in calls
+
+
 class TestHashFingerprint:
     """Test hash_fingerprint function."""
 

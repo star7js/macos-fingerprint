@@ -265,6 +265,64 @@ class TestCompareFingerprints:
         assert result["current_timestamp"] == "2026-06-01T00:00:00"
 
 
+class TestIgnoreCollectors:
+    """Test ignore_collectors parameter."""
+
+    def test_ignored_collector_not_in_changes(self):
+        """Ignored collector changes should not appear in results."""
+        baseline = {
+            "timestamp": "t1",
+            "collectors": {
+                "A": {"v": 1},
+                "B": {"v": 2},
+            },
+        }
+        current = {
+            "timestamp": "t2",
+            "collectors": {
+                "A": {"v": 10},
+                "B": {"v": 20},
+            },
+        }
+
+        result = compare_fingerprints(baseline, current, ignore_collectors=["A"])
+        assert "A" not in result["changes"]
+        assert "B" in result["changes"]
+        assert result["summary"]["total_changes"] == 1
+
+    def test_ignore_empty_list_changes_nothing(self):
+        """Empty ignore list behaves normally."""
+        baseline = {"timestamp": "t1", "collectors": {"A": {"v": 1}}}
+        current = {"timestamp": "t2", "collectors": {"A": {"v": 2}}}
+
+        result = compare_fingerprints(baseline, current, ignore_collectors=[])
+        assert result["summary"]["total_changes"] == 1
+
+    def test_ignore_none_changes_nothing(self):
+        """None ignore list behaves normally."""
+        baseline = {"timestamp": "t1", "collectors": {"A": {"v": 1}}}
+        current = {"timestamp": "t2", "collectors": {"A": {"v": 2}}}
+
+        result = compare_fingerprints(baseline, current, ignore_collectors=None)
+        assert result["summary"]["total_changes"] == 1
+
+    def test_ignore_added_collector(self):
+        """An ignored collector that was added is not reported."""
+        baseline = {"timestamp": "t1", "collectors": {}}
+        current = {"timestamp": "t2", "collectors": {"New": {"v": 1}}}
+
+        result = compare_fingerprints(baseline, current, ignore_collectors=["New"])
+        assert result["summary"]["total_changes"] == 0
+
+    def test_ignore_removed_collector(self):
+        """An ignored collector that was removed is not reported."""
+        baseline = {"timestamp": "t1", "collectors": {"Old": {"v": 1}}}
+        current = {"timestamp": "t2", "collectors": {}}
+
+        result = compare_fingerprints(baseline, current, ignore_collectors=["Old"])
+        assert result["summary"]["total_changes"] == 0
+
+
 class TestExport:
     """Test export functions."""
 

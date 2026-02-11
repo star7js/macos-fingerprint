@@ -55,6 +55,6 @@ markers = [
 
 [tool.coverage.run]
 omit = [
-    "src/macos_fingerprint/gui.py",
+    "src/macos_fingerprint/gui/*",
     "src/macos_fingerprint/__main__.py",
 ]

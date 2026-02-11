@@ -108,6 +108,47 @@ class TestCollectorRegistry:
         assert "InstalledAppsCollector" in results
         assert results["InstalledAppsCollector"].success
 
+    @patch("macos_fingerprint.collectors.apps.run_command")
+    def test_collect_all_parallel(self, mock_run_command):
+        """Test parallel collection."""
+        mock_run_command.return_value = None
+        registry = CollectorRegistry()
+        registry.register(InstalledAppsCollector())
+        registry.register(SystemInfoCollector())
+
+        results = registry.collect_all(parallel=True, max_workers=2)
+        assert "InstalledAppsCollector" in results
+        assert "SystemInfoCollector" in results
+
+    @patch("macos_fingerprint.collectors.apps.run_command")
+    def test_collect_all_with_progress_callback(self, mock_run_command):
+        """Test that progress callback is invoked."""
+        mock_run_command.return_value = None
+        registry = CollectorRegistry()
+        registry.register(InstalledAppsCollector())
+
+        calls = []
+        def cb(name, idx, total):
+            calls.append((name, idx, total))
+
+        registry.collect_all(progress_callback=cb)
+        assert len(calls) == 1
+        assert calls[0] == ("InstalledAppsCollector", 0, 1)
+
+    @patch("macos_fingerprint.collectors.apps.run_command")
+    def test_collect_all_parallel_with_callback(self, mock_run_command):
+        """Test progress callback in parallel mode."""
+        mock_run_command.return_value = None
+        registry = CollectorRegistry()
+        registry.register(InstalledAppsCollector())
+
+        calls = []
+        def cb(name, idx, total):
+            calls.append(name)
+
+        registry.collect_all(parallel=True, max_workers=1, progress_callback=cb)
+        assert "InstalledAppsCollector" in calls
+
 
 @patch("macos_fingerprint.collectors.apps.run_command")
 class TestInstalledAppsCollector:

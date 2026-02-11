@@ -4,12 +4,43 @@ Core fingerprinting functionality.
 
 import hashlib
 import json
+import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional, Set
 
 from ..collectors.base import CollectorRegistry, default_registry
 from ..collectors import apps, system, network, security, user, developer
 from ..utils.crypto import hash_fingerprint_data
+
+logger = logging.getLogger(__name__)
+
+# Canonical list of all collector names for validation / listing.
+ALL_COLLECTOR_NAMES: List[str] = [
+    "InstalledAppsCollector",
+    "BrowserExtensionsCollector",
+    "LaunchAgentsCollector",
+    "StartupItemsCollector",
+    "SystemInfoCollector",
+    "KernelExtensionsCollector",
+    "PrintersCollector",
+    "BluetoothDevicesCollector",
+    "TimeMachineCollector",
+    "NetworkConfigCollector",
+    "OpenPortsCollector",
+    "NetworkConnectionsCollector",
+    "SSHConfigCollector",
+    "HostsFileCollector",
+    "NetworkSharesCollector",
+    "SecuritySettingsCollector",
+    "GatekeeperCollector",
+    "XProtectCollector",
+    "MRTCollector",
+    "UserAccountsCollector",
+    "HomebrewCollector",
+    "PipPackagesCollector",
+    "NpmPackagesCollector",
+    "XcodeCollector",
+]
 
 
 def register_all_collectors(registry: Optional[CollectorRegistry] = None):
@@ -62,6 +93,11 @@ def register_all_collectors(registry: Optional[CollectorRegistry] = None):
 def create_fingerprint(
     hash_sensitive: bool = True,
     registry: Optional[CollectorRegistry] = None,
+    collectors: Optional[List[str]] = None,
+    exclude: Optional[List[str]] = None,
+    progress_callback: Optional[object] = None,
+    parallel: bool = False,
+    max_workers: int = 4,
 ) -> Dict[str, Any]:
     """
     Create a system fingerprint by running all collectors.
@@ -70,6 +106,14 @@ def create_fingerprint(
         hash_sensitive: Whether to hash sensitive fields (default: True)
         registry: Optional registry instance. A fresh default registry
                   is used when *None*.
+        collectors: Optional list of collector names to include (whitelist).
+                    When set, only these collectors will run.
+        exclude: Optional list of collector names to exclude (blacklist).
+                 Applied after the *collectors* whitelist.
+        progress_callback: Optional callable(collector_name, index, total)
+                           invoked before each collector runs.
+        parallel: Run collectors concurrently with ThreadPoolExecutor.
+        max_workers: Max threads when *parallel* is True (default 4).
 
     Returns:
         Dictionary containing fingerprint data
@@ -80,8 +124,25 @@ def create_fingerprint(
         registry = CollectorRegistry()
         register_all_collectors(registry)
 
+    # Apply --collectors whitelist: remove anything not requested.
+    if collectors:
+        include_set: Set[str] = set(collectors)
+        all_names = [c.name for c in registry.get_all_collectors()]
+        for name in all_names:
+            if name not in include_set:
+                registry.unregister(name)
+
+    # Apply --exclude blacklist: remove excluded collectors.
+    if exclude:
+        for name in exclude:
+            registry.unregister(name)
+
     # Collect all data
-    results = registry.collect_all()
+    results = registry.collect_all(
+        parallel=parallel,
+        max_workers=max_workers,
+        progress_callback=progress_callback,
+    )
 
     # Build fingerprint structure
     fingerprint: Dict[str, Any] = {

@@ -2,10 +2,14 @@
 Base collector class and registry for system fingerprinting.
 """
 
+import logging
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class CollectorCategory(Enum):
@@ -136,16 +140,65 @@ class CollectorRegistry:
             if collector.category == category
         ]
 
-    def collect_all(self) -> Dict[str, CollectorResult]:
+    def collect_all(
+        self,
+        parallel: bool = False,
+        max_workers: int = 4,
+        progress_callback: Optional[Callable] = None,
+    ) -> Dict[str, CollectorResult]:
         """
         Execute all registered collectors.
+
+        Args:
+            parallel: Run collectors concurrently using threads.
+            max_workers: Maximum thread-pool size when *parallel* is True.
+            progress_callback: Optional callable(name, index, total) invoked
+                               before/after each collector runs.
 
         Returns:
             Dictionary mapping collector names to results
         """
+        items = list(self._collectors.items())
+        total = len(items)
+
+        if not parallel:
+            results: Dict[str, CollectorResult] = {}
+            for idx, (name, collector) in enumerate(items):
+                if progress_callback is not None:
+                    try:
+                        progress_callback(name, idx, total)
+                    except Exception:
+                        pass
+                results[name] = collector.safe_collect()
+            return results
+
+        # Parallel execution
         results = {}
-        for name, collector in self._collectors.items():
-            results[name] = collector.safe_collect()
+
+        def _run(name: str, collector: BaseCollector, idx: int) -> tuple:
+            if progress_callback is not None:
+                try:
+                    progress_callback(name, idx, total)
+                except Exception:
+                    pass
+            return name, collector.safe_collect()
+
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {
+                pool.submit(_run, name, collector, idx): name
+                for idx, (name, collector) in enumerate(items)
+            }
+            for future in as_completed(futures):
+                try:
+                    name, result = future.result()
+                    results[name] = result
+                except Exception as exc:
+                    cname = futures[future]
+                    logger.error("Collector %s raised: %s", cname, exc)
+                    results[cname] = CollectorResult(
+                        success=False, data=None, error=str(exc), collector_name=cname
+                    )
+
         return results
 
     def clear(self) -> None:
