@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from typing import Callable, Dict, Any, List, Optional, Set
 
-from ..collectors.base import CollectorRegistry, default_registry
+from ..collectors.base import CollectorRegistry
 from ..collectors import apps, system, network, security, user, developer
 from ..utils.crypto import hash_fingerprint_data
 
@@ -43,16 +43,12 @@ ALL_COLLECTOR_NAMES: List[str] = [
 ]
 
 
-def register_all_collectors(registry: Optional[CollectorRegistry] = None):
+def register_all_collectors(registry: CollectorRegistry):
     """Register all available collectors.
 
     Args:
-        registry: Registry instance to populate. Uses the default
-                  module-level registry when *None*.
+        registry: Registry instance to populate.
     """
-    if registry is None:
-        registry = default_registry
-
     # Apps
     registry.register(apps.InstalledAppsCollector())
     registry.register(apps.BrowserExtensionsCollector())

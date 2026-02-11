@@ -68,12 +68,26 @@ def classify_severity(collector_name: str, change_type: ChangeType) -> ChangeSev
         return ChangeSeverity.LOW
 
 
+def _make_hashable(item: Any) -> Any:
+    """Convert an item to a hashable form for use as a Counter key.
+
+    Dicts and lists are serialised to a JSON string so they can be
+    counted.  Primitives (str, int, float, bool, None) are returned
+    as-is since they are already hashable.
+    """
+    if isinstance(item, (dict, list)):
+        return json.dumps(item, sort_keys=True)
+    return item
+
+
 def compare_lists(baseline: List, current: List) -> Dict[str, List]:
     """
     Compare two lists and return added/removed items.
 
     Uses Counter-based comparison to correctly account for duplicate
-    entries and quantity changes.
+    entries and quantity changes.  Unhashable items (dicts, nested
+    lists) are converted to a canonical JSON string for counting and
+    then restored to their original form.
 
     Args:
         baseline: Baseline list
@@ -82,8 +96,20 @@ def compare_lists(baseline: List, current: List) -> Dict[str, List]:
     Returns:
         Dictionary with 'added' and 'removed' keys
     """
-    baseline_counts = Counter(baseline) if baseline else Counter()
-    current_counts = Counter(current) if current else Counter()
+    # Build a mapping from hashable key -> original value so we can
+    # restore the original objects in the result.
+    key_to_orig: Dict[Any, Any] = {}
+
+    def _count(items: List) -> Counter:
+        c: Counter = Counter()
+        for item in items:
+            k = _make_hashable(item)
+            key_to_orig[k] = item
+            c[k] += 1
+        return c
+
+    baseline_counts = _count(baseline) if baseline else Counter()
+    current_counts = _count(current) if current else Counter()
 
     added: List = []
     removed: List = []
@@ -91,10 +117,11 @@ def compare_lists(baseline: List, current: List) -> Dict[str, List]:
     all_items = set(baseline_counts.keys()) | set(current_counts.keys())
     for item in sorted(all_items, key=str):
         diff = current_counts.get(item, 0) - baseline_counts.get(item, 0)
+        original = key_to_orig[item]
         if diff > 0:
-            added.extend([item] * diff)
+            added.extend([original] * diff)
         elif diff < 0:
-            removed.extend([item] * abs(diff))
+            removed.extend([original] * abs(diff))
 
     return {"added": sorted(added, key=str), "removed": sorted(removed, key=str)}
 

@@ -204,7 +204,3 @@ class CollectorRegistry:
     def clear(self) -> None:
         """Clear all registered collectors."""
         self._collectors.clear()
-
-
-# Module-level default registry for convenience.
-default_registry = CollectorRegistry()
