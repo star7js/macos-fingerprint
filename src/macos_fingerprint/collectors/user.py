@@ -3,7 +3,7 @@ User-related collectors for accounts and user-specific information.
 """
 
 from .base import BaseCollector, CollectorResult, CollectorCategory
-from ..utils.commands import run_command
+from ..utils.commands import run_command, split_lines
 
 
 class UserAccountsCollector(BaseCollector):
@@ -15,6 +15,6 @@ class UserAccountsCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["dscl", ".", "-list", "/Users"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)

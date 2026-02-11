@@ -4,7 +4,7 @@ Application collectors for installed apps, extensions, and launch agents.
 
 import os
 from .base import BaseCollector, CollectorResult, CollectorCategory
-from ..utils.commands import run_command
+from ..utils.commands import run_command, split_lines
 
 
 class InstalledAppsCollector(BaseCollector):
@@ -19,8 +19,8 @@ class InstalledAppsCollector(BaseCollector):
         user_apps = run_command(["ls", "-1", os.path.expanduser("~/Applications")])
 
         data = {
-            "system": system_apps.split("\n") if system_apps else [],
-            "user": user_apps.split("\n") if user_apps else [],
+            "system": split_lines(system_apps),
+            "user": split_lines(user_apps),
         }
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
@@ -55,9 +55,9 @@ class BrowserExtensionsCollector(BaseCollector):
         )
 
         data = {
-            "safari": safari_extensions.split("\n") if safari_extensions else [],
-            "chrome": chrome_extensions.split("\n") if chrome_extensions else [],
-            "firefox": firefox_extensions.split("\n") if firefox_extensions else [],
+            "safari": split_lines(safari_extensions),
+            "chrome": split_lines(chrome_extensions),
+            "firefox": split_lines(firefox_extensions),
         }
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
@@ -79,8 +79,8 @@ class LaunchAgentsCollector(BaseCollector):
         )
 
         data = {
-            "system": system_agents.split("\n") if system_agents else [],
-            "user": user_agents.split("\n") if user_agents else [],
+            "system": split_lines(system_agents),
+            "user": split_lines(user_agents),
         }
 
         return CollectorResult(success=True, data=data, collector_name=self.name)

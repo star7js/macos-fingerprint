@@ -3,7 +3,7 @@ Developer environment collectors for Homebrew, pip, npm, and Xcode.
 """
 
 from .base import BaseCollector, CollectorResult, CollectorCategory
-from ..utils.commands import run_command
+from ..utils.commands import run_command, split_lines
 
 
 class HomebrewCollector(BaseCollector):
@@ -20,8 +20,8 @@ class HomebrewCollector(BaseCollector):
         casks = run_command(["brew", "list", "--cask"])
 
         data = {
-            "formulas": formulas.split("\n") if formulas else [],
-            "casks": casks.split("\n") if casks else [],
+            "formulas": split_lines(formulas),
+            "casks": split_lines(casks),
         }
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
@@ -40,7 +40,7 @@ class PipPackagesCollector(BaseCollector):
         if not result:
             result = run_command(["pip", "list"])
 
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -54,7 +54,7 @@ class NpmPackagesCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["npm", "list", "-g", "--depth=0"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -71,7 +71,7 @@ class XcodeCollector(BaseCollector):
         selected_path = run_command(["xcode-select", "-p"])
 
         data = {
-            "version": version.split("\n") if version else [],
+            "version": split_lines(version),
             "selected_path": selected_path if selected_path else "",
         }
 

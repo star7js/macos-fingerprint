@@ -2,6 +2,7 @@
 Secure storage for fingerprint data.
 """
 
+import hmac
 import json
 import logging
 from typing import Dict, Any, Optional
@@ -84,8 +85,9 @@ def load_fingerprint(
             if "_integrity_hash" in data:
                 stored_hash = data.pop("_integrity_hash")
                 computed_hash = compute_integrity_hash(data, password=password)
-                if stored_hash != computed_hash:
-                    logger.warning("Integrity check failed - data may be corrupted")
+                if not hmac.compare_digest(stored_hash, computed_hash):
+                    logger.error("Integrity check failed - data may be tampered")
+                    return None
             fingerprint = data
 
         return fingerprint

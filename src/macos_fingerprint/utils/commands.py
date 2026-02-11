@@ -10,6 +10,20 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 
+def split_lines(text: Optional[str]) -> List[str]:
+    """Split text into lines, filtering out empty trailing entries.
+
+    Args:
+        text: Text to split, or None.
+
+    Returns:
+        List of non-empty lines.
+    """
+    if not text:
+        return []
+    return [line for line in text.split("\n") if line]
+
+
 def sanitize_path(path: str) -> str:
     """
     Sanitize a file path to prevent path traversal attacks.
@@ -29,12 +43,13 @@ def sanitize_path(path: str) -> str:
     # Expand user home directory
     expanded = os.path.expanduser(path)
 
-    # Resolve to absolute path and normalize
-    resolved = os.path.abspath(expanded)
+    # Resolve to absolute path, following symlinks to prevent symlink attacks
+    resolved = os.path.realpath(expanded)
 
-    # Check for suspicious patterns
-    if ".." in path or path.startswith("/dev/") or path.startswith("/proc/"):
-        raise ValueError(f"Invalid path: {path}")
+    # Check for suspicious patterns in both the original and resolved paths
+    for p in (path, resolved):
+        if ".." in p or p.startswith("/dev/") or p.startswith("/proc/"):
+            raise ValueError(f"Invalid path: {path}")
 
     return resolved
 
@@ -150,16 +165,19 @@ def safe_write_file(filepath: str, content: str, permissions: int = 0o600) -> bo
     try:
         sanitized_path = sanitize_path(filepath)
 
-        # Ensure parent directory exists
+        # Ensure parent directory exists with restricted permissions
         parent_dir = os.path.dirname(sanitized_path)
-        os.makedirs(parent_dir, exist_ok=True)
+        os.makedirs(parent_dir, mode=0o700, exist_ok=True)
 
-        # Write file
-        with open(sanitized_path, "w", encoding="utf-8") as f:
-            f.write(content)
-
-        # Set secure permissions
-        os.chmod(sanitized_path, permissions)
+        # Open file with secure permissions from the start to avoid
+        # a TOCTOU window where the file is briefly world-readable.
+        fd = os.open(sanitized_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, permissions)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+        except Exception:
+            os.close(fd)
+            raise
 
         return True
     except (OSError, IOError, ValueError):
@@ -186,8 +204,10 @@ def validate_json_safe(json_string: str, max_size: int = 100 * 1024 * 1024) -> b
     if len(json_string) > max_size:
         raise ValueError(f"JSON string too large: {len(json_string)} bytes")
 
-    # Check for excessive nesting (simple heuristic)
+    # Reject JSON with an excessive number of object/array markers as a
+    # heuristic against resource-exhaustion attacks.  Note: this counts
+    # total braces/brackets, not actual nesting depth.
     if json_string.count("{") > 1000 or json_string.count("[") > 1000:
-        raise ValueError("JSON has excessive nesting")
+        raise ValueError("JSON has excessive structure complexity")
 
     return True

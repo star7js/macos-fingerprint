@@ -5,7 +5,7 @@ Network information collectors.
 import os
 import re
 from .base import BaseCollector, CollectorResult, CollectorCategory
-from ..utils.commands import run_command, safe_read_file
+from ..utils.commands import run_command, safe_read_file, split_lines
 
 
 class NetworkConfigCollector(BaseCollector):
@@ -21,7 +21,7 @@ class NetworkConfigCollector(BaseCollector):
         # Get active network services.
         # Output format: "(1) Wi-Fi", "(2) Ethernet", disabled: "(*) Service"
         network_services = run_command(["networksetup", "-listnetworkserviceorder"])
-        network_services_list = network_services.split("\n") if network_services else []
+        network_services_list = split_lines(network_services)
         active_services = []
         for line in network_services_list:
             # Match numbered entries like "(1) Wi-Fi" but skip disabled "(*) ..."
@@ -36,7 +36,7 @@ class NetworkConfigCollector(BaseCollector):
                 ip_addresses[service] = ip
 
         dns_result = run_command(["scutil", "--dns"])
-        dns_servers_list = dns_result.split("\n") if dns_result else []
+        dns_servers_list = split_lines(dns_result)
         dns_servers = [line for line in dns_servers_list if "nameserver[" in line]
 
         routing_table = run_command(["netstat", "-nr"])
@@ -63,14 +63,14 @@ class NetworkConfigCollector(BaseCollector):
         )
 
         data = {
-            "interfaces": interfaces.split("\n") if interfaces else [],
+            "interfaces": split_lines(interfaces),
             "active_services": active_services,
             "ip_addresses": ip_addresses,
             "dns_servers": dns_servers,
-            "routing_table": routing_table.split("\n") if routing_table else [],
-            "arp_cache": arp_cache.split("\n") if arp_cache else [],
-            "wifi_networks": wifi_networks.split("\n") if wifi_networks else [],
-            "vpn": vpn.split("\n") if vpn else [],
+            "routing_table": split_lines(routing_table),
+            "arp_cache": split_lines(arp_cache),
+            "wifi_networks": split_lines(wifi_networks),
+            "vpn": split_lines(vpn),
             "proxy_settings": proxy_settings,
             "firewall_status": firewall_status if firewall_status else "",
         }
@@ -88,7 +88,7 @@ class OpenPortsCollector(BaseCollector):
     def collect(self) -> CollectorResult:
         # Use non-privileged lsof (shows user processes only)
         result = run_command(["lsof", "-i", "-P", "-n"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -102,7 +102,7 @@ class NetworkConnectionsCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["netstat", "-an"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -119,8 +119,8 @@ class SSHConfigCollector(BaseCollector):
         known_hosts = safe_read_file(os.path.expanduser("~/.ssh/known_hosts"))
 
         data = {
-            "sshd_config": ssh_config.split("\n") if ssh_config else [],
-            "known_hosts": known_hosts.split("\n") if known_hosts else [],
+            "sshd_config": split_lines(ssh_config),
+            "known_hosts": split_lines(known_hosts),
         }
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
@@ -135,7 +135,7 @@ class HostsFileCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = safe_read_file("/etc/hosts")
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
@@ -149,7 +149,7 @@ class NetworkSharesCollector(BaseCollector):
 
     def collect(self) -> CollectorResult:
         result = run_command(["sharing", "-l"])
-        data = result.split("\n") if result else []
+        data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
 
