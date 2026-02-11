@@ -19,19 +19,41 @@ class NetworkConfigCollector(BaseCollector):
         interfaces = run_command(["networksetup", "-listallhardwareports"])
 
         # Get active network services.
-        # Output format: "(1) Wi-Fi", "(2) Ethernet", disabled: "(*) Service"
+        # Output format:
+        #   (1) Wi-Fi
+        #   (Hardware Port: Wi-Fi, Device: en0)
+        #   (2) Ethernet
+        #   (Hardware Port: Ethernet, Device: en1)
+        #   (*) Disabled Service      <-- disabled, skip
         network_services = run_command(["networksetup", "-listnetworkserviceorder"])
         network_services_list = split_lines(network_services)
         active_services = []
+        # Map service name -> device name (e.g. "Wi-Fi" -> "en0")
+        service_to_device = {}
+        last_service = None
         for line in network_services_list:
+            stripped = line.strip()
             # Match numbered entries like "(1) Wi-Fi" but skip disabled "(*) ..."
-            m = re.match(r"^\((\d+)\)\s+(.+)$", line.strip())
+            m = re.match(r"^\((\d+)\)\s+(.+)$", stripped)
             if m:
-                active_services.append(m.group(2))
+                last_service = m.group(2)
+                active_services.append(last_service)
+                continue
+            # Match device line: "(Hardware Port: ..., Device: en0)"
+            if last_service:
+                dm = re.match(r"^\(Hardware Port:.+Device:\s*(\S+)\)$", stripped)
+                if dm:
+                    service_to_device[last_service] = dm.group(1)
+                    last_service = None
 
         ip_addresses = {}
         for service in active_services:
-            ip = run_command(["ipconfig", "getifaddr", service])
+            # ipconfig getifaddr requires an interface name (e.g. en0),
+            # not a service name (e.g. Wi-Fi).
+            device = service_to_device.get(service)
+            if not device:
+                continue
+            ip = run_command(["ipconfig", "getifaddr", device])
             if ip:
                 ip_addresses[service] = ip
 

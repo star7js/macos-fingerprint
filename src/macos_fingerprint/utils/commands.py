@@ -75,11 +75,21 @@ def validate_command(command: List[str]) -> bool:
 
     # Check for shell metacharacters in command arguments
     dangerous_chars = ["|", "&", ";", ">", "<", "`", "$", "(", ")"]
-    for arg in command:
+
+    # For osascript, only the argument *following* a -e flag is an
+    # AppleScript expression where metacharacters are expected.  All
+    # other arguments are still validated.
+    osascript_expr_indices: set = set()
+    if command[0] == "osascript":
+        for i, arg in enumerate(command):
+            if arg == "-e" and i + 1 < len(command):
+                osascript_expr_indices.add(i + 1)
+
+    for idx, arg in enumerate(command):
+        if idx in osascript_expr_indices:
+            continue
         if any(char in arg for char in dangerous_chars):
-            # Allow these in specific safe contexts (like osascript)
-            if command[0] not in ["osascript"]:
-                raise ValueError(f"Command contains dangerous characters: {arg}")
+            raise ValueError(f"Command contains dangerous characters: {arg}")
 
     return True
 
