@@ -5,6 +5,54 @@ All notable changes to macOS Fingerprint will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-07-06
+
+First tagged release. Builds on the 2.0.0 foundation with compliance auditing,
+unattended monitoring, and the usability/hardening work from the roadmap.
+
+### Added
+
+#### CIS Benchmark Audit
+- `audit` command scores the system against a pragmatic subset of the CIS Apple
+  macOS Benchmark (23 Level 1 controls), with per-control remediation
+- Indeterminate checks (missing privileges, not macOS) are excluded from the
+  score rather than counted as passes or failures
+- `--level`, `--format {text,json,html}`, and `-o/--output`; exits non-zero when
+  any determinable check fails, for CI/monitoring use
+- Self-contained, shareable HTML scorecard (inline CSS, light/dark)
+
+#### Headless Monitoring Agent
+- `agent` command for unattended scheduled monitoring (`run`, `history`,
+  `verify`, `install`, `uninstall`)
+- `agent install` generates and loads a launchd agent for background scans
+- Append-only, hash-chained history log — a silently edited or deleted record
+  breaks the chain and is detectable (`agent verify`)
+- Optional drift detection against a saved baseline each cycle
+
+#### Usability
+- Config file (`~/.macos-fingerprint/config.toml`) for persistent settings
+- `--collectors` / `--exclude` to select which collectors run
+- `--json` machine-readable output across CLI commands
+- Ignore rules (collector names to skip in comparisons)
+- Parallel collection with a thread pool (`--parallel`) and per-collector
+  progress callbacks
+- `--password-file` and interactive stdin prompt for secure password entry
+
+### Changed
+- HMAC integrity key is derived from the user's password when encryption is used
+- GUI split into `gui/app.py`, `gui/tabs.py`, and `gui/workers.py`
+- `compare_lists` preserves ordering and duplicate information
+
+### Fixed
+- Removed `dns-sd -B` collector that could hang the scan for the full timeout
+- SSH/Hosts collectors read files via `safe_read_file()` instead of shelling out
+  to `cat`
+- `CollectorRegistry` is instance-based rather than a class-level singleton
+
+### CI
+- Test coverage floor raised to 75% (207 tests, ~77% coverage)
+- Stable `ci-success` gate for branch protection, independent of the test matrix
+
 ## [2.0.0] - 2026-01-29
 
 ### Added
