@@ -35,6 +35,18 @@ A comprehensive, security-focused macOS system fingerprinting tool for detecting
 - **HTML Export**: Generate beautiful comparison reports
 - **JSON Export**: Machine-readable comparison results
 
+### CIS Benchmark Audit
+
+- **Scored Compliance**: Grade your Mac against a pragmatic subset of the CIS Apple macOS Benchmark (23 Level 1 controls)
+- **Actionable Remediation**: Every failing control includes the exact fix (GUI path + CLI command)
+- **Honest Scoring**: Checks that can't be determined (missing privileges, not macOS) are excluded from the score rather than counted as passes
+- **Shareable HTML Scorecard**: Self-contained report you can email or hand to a client
+
+### Headless Monitoring Agent
+
+- **Unattended Scans**: A launchd agent runs audits and drift checks on a schedule
+- **Tamper-Evident History**: Results are appended to a hash-chained log, so a silently edited or deleted record breaks the chain and is detectable
+
 ## Installation
 
 ### From Source
@@ -100,6 +112,36 @@ macos-fingerprint compare -b secure.json --encrypted --password mypassword
 
 ```bash
 macos-fingerprint hash baseline.json
+```
+
+#### CIS Benchmark Audit
+
+```bash
+# Score the system and print a text scorecard
+macos-fingerprint audit
+
+# Restrict to Level 1 controls and write a shareable HTML report
+macos-fingerprint audit --level 1 --format html -o audit.html
+
+# Machine-readable JSON (exits non-zero if any determinable check fails)
+macos-fingerprint audit --format json
+```
+
+#### Headless Monitoring Agent
+
+```bash
+# Run one monitoring cycle now (audit + optional drift vs a baseline)
+macos-fingerprint agent run --baseline-file baseline.json
+
+# Install a launchd agent that runs every 24 hours
+macos-fingerprint agent install --interval-hours 24
+
+# Review recent records and verify the history hasn't been tampered with
+macos-fingerprint agent history
+macos-fingerprint agent verify
+
+# Remove the agent
+macos-fingerprint agent uninstall
 ```
 
 ### Python API

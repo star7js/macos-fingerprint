@@ -7,10 +7,10 @@ import json
 import logging
 from typing import Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
-
 from ..utils.commands import safe_write_file, safe_read_file, validate_json_safe
 from ..utils.crypto import FingerprintEncryption, compute_integrity_hash
+
+logger = logging.getLogger(__name__)
 
 
 def save_fingerprint(

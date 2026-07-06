@@ -8,8 +8,7 @@ TOML subset parser is provided so we don't require an extra dependency.
 
 import logging
 import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

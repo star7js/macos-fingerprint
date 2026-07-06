@@ -18,9 +18,13 @@ class TestSanitizePath:
     """Test path sanitization."""
 
     def test_normal_path(self):
-        """Test a normal absolute path."""
+        """Test a normal absolute path.
+
+        sanitize_path resolves symlinks (e.g. /tmp -> /private/tmp on macOS),
+        so compare against the realpath-resolved expectation.
+        """
         result = sanitize_path("/tmp/test.json")
-        assert result == "/tmp/test.json"
+        assert result == os.path.realpath("/tmp/test.json")
 
     def test_home_expansion(self):
         """Test ~ expansion."""
@@ -83,7 +87,7 @@ class TestValidateCommand:
 
     def test_osascript_exempt(self):
         """osascript is exempt from metacharacter checks."""
-        assert validate_command(["osascript", "-e", "tell app \"Finder\""])
+        assert validate_command(["osascript", "-e", 'tell app "Finder"'])
 
 
 class TestRunCommand:

@@ -6,6 +6,8 @@ import argparse
 import getpass
 import json
 import sys
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 from .core.fingerprint import create_fingerprint, hash_fingerprint, ALL_COLLECTOR_NAMES
 from .core.storage import save_fingerprint, load_fingerprint
@@ -49,7 +51,7 @@ def _parse_collector_names(raw: str) -> list:
 
 def _collector_kwargs(args) -> dict:
     """Extract collectors/exclude/parallel kwargs from parsed args."""
-    kwargs = {}
+    kwargs: Dict[str, Any] = {}
     if getattr(args, "collectors", None):
         kwargs["collectors"] = _parse_collector_names(args.collectors)
     if getattr(args, "exclude", None):
@@ -194,7 +196,9 @@ def cmd_hash(args):
 
     if not fingerprint:
         if json_mode:
-            print(json.dumps({"status": "error", "message": "Could not load fingerprint"}))
+            print(
+                json.dumps({"status": "error", "message": "Could not load fingerprint"})
+            )
         else:
             print("Error: Could not load fingerprint", file=sys.stderr)
         sys.exit(1)
@@ -234,6 +238,105 @@ def _add_password_args(parser):
         "--password-file",
         help="Read password from file (avoids exposing password in process table)",
     )
+
+
+def _report_timestamp() -> str:
+    """Current UTC time as an ISO-8601 string, for report/record stamps."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def cmd_audit(args):
+    """Score the system against the CIS macOS benchmark."""
+    from .audit.cis import run_audit, format_report
+    from .audit.html_report import render_html
+
+    report = run_audit(level=args.level)
+
+    if args.output:
+        if args.format == "html":
+            content = render_html(report, generated_at=_report_timestamp())
+        else:
+            content = json.dumps(report, indent=2)
+        with open(args.output, "w") as f:
+            f.write(content)
+        print(f"Report written to {args.output}")
+
+    if args.format == "json":
+        print(json.dumps(report, indent=2))
+    elif args.format == "html" and not args.output:
+        print(render_html(report, generated_at=_report_timestamp()))
+    elif args.format == "text":
+        print(format_report(report))
+
+    # Non-zero exit when any determinable check failed, for CI/monitoring.
+    if report["summary"]["failed"]:
+        sys.exit(2)
+
+
+def cmd_agent(args):
+    """Headless scheduled monitoring with a tamper-evident history."""
+    from .audit import agent
+
+    history_file = args.history_file or agent.HISTORY_FILE
+
+    if args.agent_command is None:
+        print(
+            "Specify an agent subcommand: run | history | verify | install | uninstall"
+        )
+        sys.exit(1)
+
+    if args.agent_command == "run":
+        record = agent.run_cycle(
+            _report_timestamp(),
+            history_file=history_file,
+            baseline_file=args.baseline_file,
+        )
+        a = record.get("audit") or {}
+        drift = record["drift"]
+        print(f"Recorded {record['timestamp']}")
+        if a:
+            print(
+                f"  audit: score={a.get('compliance_score')} "
+                f"grade={a.get('grade')} failed={a.get('failed')}"
+            )
+        print(
+            "  drift: " + (", ".join(drift["sections"]) if drift["changed"] else "none")
+        )
+        return
+
+    if args.agent_command == "history":
+        history = agent.load_history(history_file)
+        if not history:
+            print("No history yet.")
+            return
+        for record in history[-args.limit :]:
+            a = record.get("audit") or {}
+            drift = record["drift"]
+            drift_text = ",".join(drift["sections"]) if drift["changed"] else "none"
+            print(
+                f"{record['timestamp']}  grade={a.get('grade', '?')}  "
+                f"score={a.get('compliance_score', '?')}  drift={drift_text}"
+            )
+        return
+
+    if args.agent_command == "verify":
+        ok, index = agent.verify_history_chain(history_file)
+        if ok:
+            print("History chain intact.")
+            return
+        print(f"History chain BROKEN at record index {index} (possible tampering).")
+        sys.exit(2)
+
+    if args.agent_command == "install":
+        path, loaded = agent.install(interval_hours=args.interval_hours)
+        print(f"Agent plist written to {path}")
+        print("Loaded into launchd." if loaded else "Written (load it on macOS).")
+        return
+
+    if args.agent_command == "uninstall":
+        removed = agent.uninstall()
+        print("Agent removed." if removed else "No agent was installed.")
+        return
 
 
 def _add_collector_args(parser):
@@ -375,9 +478,7 @@ Examples:
     list_parser.set_defaults(func=cmd_list_collectors)
 
     # Init command
-    init_parser = subparsers.add_parser(
-        "init", help="Create a default config file"
-    )
+    init_parser = subparsers.add_parser("init", help="Create a default config file")
     init_parser.add_argument(
         "--json",
         action="store_true",
@@ -385,6 +486,58 @@ Examples:
         help="Output machine-readable JSON",
     )
     init_parser.set_defaults(func=cmd_init)
+
+    # Audit command
+    audit_parser = subparsers.add_parser(
+        "audit", help="Score the system against the CIS macOS benchmark"
+    )
+    audit_parser.add_argument("-o", "--output", help="Write the report to this file")
+    audit_parser.add_argument(
+        "--level",
+        type=int,
+        choices=(1, 2),
+        help="Restrict to CIS profile level 1 or 2",
+    )
+    audit_parser.add_argument(
+        "--format",
+        choices=("text", "json", "html"),
+        default="text",
+        help="Output format (default: text). 'html' renders a shareable scorecard.",
+    )
+    audit_parser.set_defaults(func=cmd_audit)
+
+    # Agent command
+    agent_parser = subparsers.add_parser(
+        "agent", help="Headless scheduled monitoring with tamper-evident history"
+    )
+    agent_parser.add_argument(
+        "--history-file",
+        default=None,
+        help="History log path (default: ~/.macos_fingerprint/history.jsonl)",
+    )
+    agent_sub = agent_parser.add_subparsers(dest="agent_command")
+    agent_run = agent_sub.add_parser(
+        "run", help="Run one monitoring cycle and record it"
+    )
+    agent_run.add_argument(
+        "--baseline-file",
+        default=None,
+        help="Baseline fingerprint to diff against for drift detection",
+    )
+    agent_hist = agent_sub.add_parser("history", help="Show recent monitoring records")
+    agent_hist.add_argument(
+        "-n", "--limit", type=int, default=20, help="Records to show (default: 20)"
+    )
+    agent_sub.add_parser("verify", help="Verify the history hash chain")
+    agent_install = agent_sub.add_parser("install", help="Install the launchd agent")
+    agent_install.add_argument(
+        "--interval-hours",
+        type=int,
+        default=24,
+        help="How often to run, in hours (default: 24)",
+    )
+    agent_sub.add_parser("uninstall", help="Remove the launchd agent")
+    agent_parser.set_defaults(func=cmd_agent)
 
     # Parse arguments
     args = parser.parse_args()

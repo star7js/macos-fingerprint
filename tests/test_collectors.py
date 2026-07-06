@@ -128,6 +128,7 @@ class TestCollectorRegistry:
         registry.register(InstalledAppsCollector())
 
         calls = []
+
         def cb(name, idx, total):
             calls.append((name, idx, total))
 
@@ -143,6 +144,7 @@ class TestCollectorRegistry:
         registry.register(InstalledAppsCollector())
 
         calls = []
+
         def cb(name, idx, total):
             calls.append(name)
 

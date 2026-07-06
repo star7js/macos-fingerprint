@@ -84,7 +84,9 @@ class TestResolvePassword:
 
     def test_resolve_password_file_missing(self, tmp_path):
         """Missing password file exits with error."""
-        args = _make_args(password=None, password_file=str(tmp_path / "nonexistent.txt"))
+        args = _make_args(
+            password=None, password_file=str(tmp_path / "nonexistent.txt")
+        )
 
         with pytest.raises(SystemExit):
             _resolve_password(args)
@@ -224,9 +226,7 @@ class TestCmdCreate:
         args = _make_args(output=temp_file, collectors="A,B")
         cmd_create(args)
 
-        mock_create.assert_called_once_with(
-            hash_sensitive=True, collectors=["A", "B"]
-        )
+        mock_create.assert_called_once_with(hash_sensitive=True, collectors=["A", "B"])
 
     @patch("macos_fingerprint.cli.create_fingerprint")
     @patch("macos_fingerprint.cli.save_fingerprint")
@@ -242,9 +242,7 @@ class TestCmdCreate:
         args = _make_args(output=temp_file, exclude="X")
         cmd_create(args)
 
-        mock_create.assert_called_once_with(
-            hash_sensitive=True, exclude=["X"]
-        )
+        mock_create.assert_called_once_with(hash_sensitive=True, exclude=["X"])
 
     @patch("macos_fingerprint.cli.create_fingerprint")
     @patch("macos_fingerprint.cli.save_fingerprint")
@@ -323,7 +321,9 @@ class TestCmdHash:
 
     @patch("macos_fingerprint.cli.load_fingerprint")
     @patch("macos_fingerprint.cli.hash_fingerprint")
-    def test_hash_json_output(self, mock_hash, mock_load, sample_fingerprint, temp_file, capsys):
+    def test_hash_json_output(
+        self, mock_hash, mock_load, sample_fingerprint, temp_file, capsys
+    ):
         """Test --json mode for hash command."""
         mock_load.return_value = sample_fingerprint
         mock_hash.return_value = "abc123"
