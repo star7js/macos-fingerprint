@@ -3,14 +3,8 @@ name: CI
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 concurrency:
@@ -176,3 +170,19 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - uses: actions/dependency-review-action@v4
+
+  # Single stable check for branch protection to require, independent of the
+  # test matrix (whose job names vary with the Python versions). Require
+  # "ci-success" in branch protection instead of a matrix job name.
+  ci-success:
+    if: always()
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Verify required jobs succeeded
+      run: |
+        if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.lint.result }}" != "success" ]; then
+          echo "Required jobs failed: test=${{ needs.test.result }} lint=${{ needs.lint.result }}"
+          exit 1
+        fi
+        echo "All required jobs passed."
