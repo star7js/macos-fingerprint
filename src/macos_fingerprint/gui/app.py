@@ -102,19 +102,23 @@ class FingerPrintApp(QMainWindow):
 
         self.tabs.addTab(
             self.scan_tab,
-            self.style().standardIcon(QStyle.SP_FileIcon), "Scan",
+            self.style().standardIcon(QStyle.SP_FileIcon),
+            "Scan",
         )
         self.tabs.addTab(
             self.compare_tab,
-            self.style().standardIcon(QStyle.SP_FileDialogDetailedView), "Compare",
+            self.style().standardIcon(QStyle.SP_FileDialogDetailedView),
+            "Compare",
         )
         self.tabs.addTab(
             self.schedule_tab,
-            self.style().standardIcon(QStyle.SP_FileDialogInfoView), "Schedule",
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView),
+            "Schedule",
         )
         self.tabs.addTab(
             self.settings_tab,
-            self.style().standardIcon(QStyle.SP_FileDialogInfoView), "Settings",
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView),
+            "Settings",
         )
 
     def setup_status_bar(self):

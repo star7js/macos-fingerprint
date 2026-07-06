@@ -186,8 +186,14 @@ class TestClassifySeverity:
 
     def test_all_critical_collectors(self):
         """Verify all critical collectors are classified correctly."""
-        for name in ["SecuritySettingsCollector", "GatekeeperCollector", "SSHConfigCollector"]:
-            assert classify_severity(name, ChangeType.MODIFIED) == ChangeSeverity.CRITICAL
+        for name in [
+            "SecuritySettingsCollector",
+            "GatekeeperCollector",
+            "SSHConfigCollector",
+        ]:
+            assert (
+                classify_severity(name, ChangeType.MODIFIED) == ChangeSeverity.CRITICAL
+            )
 
     def test_all_high_collectors(self):
         """Verify all high-severity collectors are classified correctly."""
@@ -332,7 +338,13 @@ class TestExport:
             "timestamp": "2026-01-01T00:00:00",
             "baseline_timestamp": "t1",
             "current_timestamp": "t2",
-            "summary": {"total_changes": 0, "critical": 0, "high": 0, "medium": 0, "low": 0},
+            "summary": {
+                "total_changes": 0,
+                "critical": 0,
+                "high": 0,
+                "medium": 0,
+                "low": 0,
+            },
             "changes": {},
         }
         fd, path = tempfile.mkstemp(suffix=".json")
@@ -351,12 +363,24 @@ class TestExport:
             "timestamp": "2026-01-01T00:00:00",
             "baseline_timestamp": "t1",
             "current_timestamp": "t2",
-            "summary": {"total_changes": 1, "critical": 1, "high": 0, "medium": 0, "low": 0},
+            "summary": {
+                "total_changes": 1,
+                "critical": 1,
+                "high": 0,
+                "medium": 0,
+                "low": 0,
+            },
             "changes": {
                 "SecuritySettingsCollector": {
                     "severity": "critical",
                     "type": "modified",
-                    "changes": {"firewall": {"type": "modified", "baseline": "1", "current": "0"}},
+                    "changes": {
+                        "firewall": {
+                            "type": "modified",
+                            "baseline": "1",
+                            "current": "0",
+                        }
+                    },
                 }
             },
         }

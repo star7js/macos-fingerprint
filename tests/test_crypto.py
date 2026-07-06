@@ -125,7 +125,10 @@ class TestHashFingerprintData:
             }
         }
         hash_fingerprint_data(data)
-        assert data["collectors"]["NetworkConfigCollector"]["ip_addresses"]["en0"] == "10.0.0.1"
+        assert (
+            data["collectors"]["NetworkConfigCollector"]["ip_addresses"]["en0"]
+            == "10.0.0.1"
+        )
 
     def test_hash_wifi_networks(self):
         """Test that wifi_networks in NetworkConfigCollector are hashed."""
@@ -137,7 +140,10 @@ class TestHashFingerprintData:
             }
         }
         hashed = hash_fingerprint_data(data)
-        assert hashed["collectors"]["NetworkConfigCollector"]["wifi_networks"][0] != "MyHomeWiFi"
+        assert (
+            hashed["collectors"]["NetworkConfigCollector"]["wifi_networks"][0]
+            != "MyHomeWiFi"
+        )
 
     def test_hash_routing_table(self):
         """Test that routing_table in NetworkConfigCollector is hashed."""
@@ -149,7 +155,10 @@ class TestHashFingerprintData:
             }
         }
         hashed = hash_fingerprint_data(data)
-        assert hashed["collectors"]["NetworkConfigCollector"]["routing_table"][0] != "default 192.168.1.1 UGScg en0"
+        assert (
+            hashed["collectors"]["NetworkConfigCollector"]["routing_table"][0]
+            != "default 192.168.1.1 UGScg en0"
+        )
 
 
 class TestFingerprintEncryption:

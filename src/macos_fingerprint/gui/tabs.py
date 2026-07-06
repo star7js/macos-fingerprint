@@ -2,8 +2,6 @@
 Individual tab widgets for the GUI.
 """
 
-from datetime import datetime, timedelta
-
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -46,7 +44,9 @@ class ScanTab(QWidget):
         layout = QVBoxLayout(self)
 
         self.scan_button = create_button(
-            self, "Create New Fingerprint", QStyle.SP_BrowserReload,
+            self,
+            "Create New Fingerprint",
+            QStyle.SP_BrowserReload,
             self.app.create_fingerprint,
         )
         layout.addWidget(self.scan_button)
@@ -64,7 +64,9 @@ class ScanTab(QWidget):
         layout.addWidget(self.result)
 
         self.export_button = create_button(
-            self, "Export Fingerprint", QStyle.SP_DialogSaveButton,
+            self,
+            "Export Fingerprint",
+            QStyle.SP_DialogSaveButton,
             self.app.export_fingerprint,
         )
         layout.addWidget(self.export_button)
@@ -96,7 +98,9 @@ class CompareTab(QWidget):
         layout.addLayout(baseline_row)
 
         self.compare_button = create_button(
-            self, "Compare with Baseline", QStyle.SP_FileDialogContentsView,
+            self,
+            "Compare with Baseline",
+            QStyle.SP_FileDialogContentsView,
             self.app.compare_fingerprints,
         )
         layout.addWidget(self.compare_button)
@@ -114,7 +118,9 @@ class CompareTab(QWidget):
         layout.addWidget(self.result)
 
         self.export_button = create_button(
-            self, "Export Comparison", QStyle.SP_DialogSaveButton,
+            self,
+            "Export Comparison",
+            QStyle.SP_DialogSaveButton,
             self.app.export_comparison,
         )
         layout.addWidget(self.export_button)
@@ -134,14 +140,18 @@ class ScheduleTab(QWidget):
         layout.addWidget(self.schedule_label)
 
         schedule_button = create_button(
-            self, "Schedule Daily Scan", QStyle.SP_BrowserReload,
+            self,
+            "Schedule Daily Scan",
+            QStyle.SP_BrowserReload,
             self.app.schedule_scan,
         )
         layout.addWidget(schedule_button)
         self.app._action_buttons.append(schedule_button)
 
         cancel_button = create_button(
-            self, "Cancel Scheduled Scan", QStyle.SP_BrowserStop,
+            self,
+            "Cancel Scheduled Scan",
+            QStyle.SP_BrowserStop,
             self.app.cancel_scheduled_scan,
         )
         layout.addWidget(cancel_button)
@@ -178,7 +188,9 @@ class SettingsTab(QWidget):
             self.custom_color_buttons[color_name] = button
 
         save_settings_button = create_button(
-            self, "Save Settings", QStyle.SP_DialogSaveButton,
+            self,
+            "Save Settings",
+            QStyle.SP_DialogSaveButton,
             self.app.save_settings,
         )
         layout.addWidget(save_settings_button)

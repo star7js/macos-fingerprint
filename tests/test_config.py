@@ -1,9 +1,7 @@
 """Tests for configuration file support."""
 
 import os
-import tempfile
 
-import pytest
 
 from macos_fingerprint.utils.config import (
     _parse_toml,
@@ -95,7 +93,7 @@ class TestLoadConfig:
 
     def test_load_with_section(self, tmp_path):
         cfg = tmp_path / "config.toml"
-        cfg.write_text('[scan]\nparallel = true\n')
+        cfg.write_text("[scan]\nparallel = true\n")
 
         result = load_config(str(cfg))
         # Section values are flattened
@@ -144,6 +142,7 @@ class TestApplyConfigToArgs:
     def _make_args(self, **kwargs):
         """Create a simple namespace-like object."""
         from unittest.mock import MagicMock
+
         args = MagicMock()
         defaults = {
             "output": "fingerprint.json",

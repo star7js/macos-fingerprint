@@ -152,5 +152,3 @@ class NetworkSharesCollector(BaseCollector):
         data = split_lines(result)
 
         return CollectorResult(success=True, data=data, collector_name=self.name)
-
-

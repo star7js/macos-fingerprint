@@ -10,9 +10,9 @@ from typing import Dict, Any, List, Optional
 from enum import Enum
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
-
 from ..utils.commands import safe_write_file
+
+logger = logging.getLogger(__name__)
 
 
 class ChangeSeverity(Enum):

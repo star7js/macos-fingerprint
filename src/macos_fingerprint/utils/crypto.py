@@ -237,9 +237,7 @@ def _derive_hmac_key(password: str) -> bytes:
     return kdf.derive(password.encode("utf-8"))
 
 
-def compute_integrity_hash(
-    data: Dict[str, Any], password: Optional[str] = None
-) -> str:
+def compute_integrity_hash(data: Dict[str, Any], password: Optional[str] = None) -> str:
     """
     Compute HMAC-SHA256 for integrity verification.
 
