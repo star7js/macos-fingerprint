@@ -116,6 +116,18 @@ macos-fingerprint hash baseline.json
 
 #### CIS Benchmark Audit
 
+> **What's CIS?** The [Center for Internet Security](https://www.cisecurity.org/)
+> publishes the CIS Apple macOS Benchmark — a consensus set of security
+> configuration guidelines (FileVault, firewall, Gatekeeper, SIP, sharing
+> services, etc.), each with a rationale and remediation, split into Level 1
+> (baseline) and Level 2 (stricter).
+>
+> **Scope & caveat:** This runs a pragmatic subset of ~23 Level 1 controls, not a
+> complete or certified CIS assessment. Control numbers track the benchmark's
+> structure but drift across macOS releases. Checks that can't be determined
+> (insufficient privileges, non-macOS) are reported as "unknown" and excluded
+> from the score, never counted as passes.
+
 ```bash
 # Score the system and print a text scorecard
 macos-fingerprint audit
