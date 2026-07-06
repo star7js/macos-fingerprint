@@ -172,13 +172,17 @@ Python runtime — a much larger undertaking.
 - [x] Split `gui.py` into separate modules (`gui/app.py`, `gui/tabs.py`, `gui/workers.py`)
 - [x] Raise test coverage floor to 75% (184 tests, 81% coverage)
 
-### Phase 3: Monitoring & Alerting
+### Phase 3: Monitoring & Alerting -- PARTIAL
 
-- [ ] Add a launchd plist generator (`macos-fingerprint install-daemon`) for
+- [x] Add a launchd plist generator (`macos-fingerprint agent install`) for
       background scheduled scans without the GUI
+- [x] Add fingerprint history (append-only, hash-chained JSONL via `agent`;
+      SQLite trend storage still open)
+- [x] Bonus (not originally scoped): CIS benchmark `audit` with scored,
+      exportable HTML report; tamper-evident history with `agent verify`
 - [ ] Add macOS notification center integration for critical/high severity changes
 - [ ] Add email/webhook alerting for unattended monitoring
-- [ ] Add fingerprint history with SQLite storage for trend analysis
+- [ ] Add SQLite-backed history for richer trend analysis
 - [ ] Add a `timeline` CLI command that shows change history across baselines
 - [ ] Add a `watch` CLI command for continuous monitoring mode
 
