@@ -26,7 +26,7 @@ jobs:
         python-version: ${{ fromJson(github.event_name == 'pull_request' && '["3.12"]' || '["3.10","3.11","3.12"]') }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -57,7 +57,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -82,7 +82,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -104,7 +104,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -125,7 +125,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -148,7 +148,7 @@ jobs:
   cli-smoke-test:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -168,7 +168,7 @@ jobs:
     runs-on: macos-latest
     if: github.event_name == 'pull_request'
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: actions/dependency-review-action@v4
 
   # Single stable check for branch protection to require, independent of the
